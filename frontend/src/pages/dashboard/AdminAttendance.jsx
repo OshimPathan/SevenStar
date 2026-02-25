@@ -57,7 +57,7 @@ const AdminAttendance = () => {
                 ...s,
                 status: attMap[s.enrollment_id]?.['General'] ||
                     Object.values(attMap[s.enrollment_id] || {})[0] ||
-                    'PRESENT',
+                    'Present',
             })));
         } catch (e) {
             console.error('Failed to load attendance:', e);
@@ -97,12 +97,12 @@ const AdminAttendance = () => {
     };
 
     const markAllPresent = () => {
-        setStudents(current => current.map(s => ({ ...s, status: 'PRESENT' })));
+        setStudents(current => current.map(s => ({ ...s, status: 'Present' })));
         setSaved(false);
     };
 
     const markAllAbsent = () => {
-        setStudents(current => current.map(s => ({ ...s, status: 'ABSENT' })));
+        setStudents(current => current.map(s => ({ ...s, status: 'Absent' })));
         setSaved(false);
     };
 
@@ -132,10 +132,10 @@ const AdminAttendance = () => {
 
     const stats = useMemo(() => ({
         total: students.length,
-        present: students.filter(s => s.status === 'PRESENT').length,
-        absent: students.filter(s => s.status === 'ABSENT').length,
-        late: students.filter(s => s.status === 'LATE').length,
-        halfDay: students.filter(s => s.status === 'HALF_DAY').length,
+        present: students.filter(s => s.status === 'Present').length,
+        absent: students.filter(s => s.status === 'Absent').length,
+        late: students.filter(s => s.status === 'Late').length,
+        halfDay: students.filter(s => s.status === 'Half-Day').length,
     }), [students]);
 
     const selectedClassName = classes.find(c => c.id === selectedClass)?.name || '';
@@ -256,10 +256,10 @@ const AdminAttendance = () => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {[
-                                        { status: 'PRESENT', label: 'P', activeClass: 'bg-emerald-500 text-white shadow-lg shadow-emerald-200', inactiveClass: 'bg-gray-100 text-gray-400 hover:bg-emerald-50 hover:text-emerald-500' },
-                                        { status: 'ABSENT', label: 'A', activeClass: 'bg-red-500 text-white shadow-lg shadow-red-200', inactiveClass: 'bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500' },
-                                        { status: 'LATE', label: 'L', activeClass: 'bg-amber-500 text-white shadow-lg shadow-amber-200', inactiveClass: 'bg-gray-100 text-gray-400 hover:bg-amber-50 hover:text-amber-500' },
-                                        { status: 'HALF_DAY', label: 'H', activeClass: 'bg-blue-500 text-white shadow-lg shadow-blue-200', inactiveClass: 'bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-500' },
+                                        { status: 'Present', label: 'P', activeClass: 'bg-emerald-500 text-white shadow-lg shadow-emerald-200', inactiveClass: 'bg-gray-100 text-gray-400 hover:bg-emerald-50 hover:text-emerald-500' },
+                                        { status: 'Absent', label: 'A', activeClass: 'bg-red-500 text-white shadow-lg shadow-red-200', inactiveClass: 'bg-gray-100 text-gray-400 hover:bg-red-50 hover:text-red-500' },
+                                        { status: 'Late', label: 'L', activeClass: 'bg-amber-500 text-white shadow-lg shadow-amber-200', inactiveClass: 'bg-gray-100 text-gray-400 hover:bg-amber-50 hover:text-amber-500' },
+                                        { status: 'Half-Day', label: 'H', activeClass: 'bg-blue-500 text-white shadow-lg shadow-blue-200', inactiveClass: 'bg-gray-100 text-gray-400 hover:bg-blue-50 hover:text-blue-500' },
                                     ].map(btn => (
                                         <button
                                             key={btn.status}

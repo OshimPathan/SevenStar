@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CreditCard, Plus, Search, X, Eye, Edit3, Trash2, DollarSign,
-    Clock, CheckCircle, AlertCircle, Users, Filter, Download } from 'lucide-react';
-import { getAllFees, createFee, createBulkFees, updateFee, deleteFee,
-    getClasses, getStudentsByClass } from '../../api';
+import {
+    CreditCard, Plus, Search, X, Eye, Edit3, Trash2, DollarSign,
+    Clock, CheckCircle, AlertCircle, Users, Filter, Download
+} from 'lucide-react';
+import {
+    getAllFees, createFee, createBulkFees, updateFee, deleteFee,
+    getClasses, getStudentsByClass
+} from '../../api';
 
 const AdminFees = () => {
     const [fees, setFees] = useState([]);
@@ -18,7 +22,7 @@ const AdminFees = () => {
     const [bulkClass, setBulkClass] = useState('');
     const [bulkStudents, setBulkStudents] = useState([]);
     const [form, setForm] = useState({
-        student_id: '', amount: '', due_date: '', status: 'UNPAID',
+        student_id: '', amount: '', due_date: '', status: 'Unpaid',
         amount_paid: '', description: '',
     });
     const [loading, setLoading] = useState(true);
@@ -54,9 +58,9 @@ const AdminFees = () => {
         );
         return {
             total: filtered.reduce((s, f) => s + parseFloat(f.amount || 0), 0),
-            paid: filtered.filter(f => f.status === 'PAID').reduce((s, f) => s + parseFloat(f.amount_paid || 0), 0),
-            pending: filtered.filter(f => f.status !== 'PAID').reduce((s, f) => s + parseFloat(f.amount || 0) - parseFloat(f.amount_paid || 0), 0),
-            overdue: filtered.filter(f => f.status === 'UNPAID' && new Date(f.due_date) < new Date()).length,
+            paid: filtered.filter(f => f.status === 'Paid').reduce((s, f) => s + parseFloat(f.amount_paid || 0), 0),
+            pending: filtered.filter(f => f.status !== 'Paid').reduce((s, f) => s + parseFloat(f.amount || 0) - parseFloat(f.amount_paid || 0), 0),
+            overdue: filtered.filter(f => f.status === 'Unpaid' && new Date(f.due_date) < new Date()).length,
             count: filtered.length,
         };
     }, [fees, filterClass, filterStatus, search]);
@@ -70,7 +74,7 @@ const AdminFees = () => {
     }, [fees, filterClass, filterStatus, search]);
 
     const resetForm = () => {
-        setForm({ student_id: '', amount: '', due_date: '', status: 'UNPAID', amount_paid: '', description: '' });
+        setForm({ student_id: '', amount: '', due_date: '', status: 'Unpaid', amount_paid: '', description: '' });
         setEditingFee(null);
         setBulkMode(false);
         setBulkClass('');
@@ -119,16 +123,16 @@ const AdminFees = () => {
 
     const handleMarkPaid = async (fee) => {
         try {
-            await updateFee(fee.id, { status: 'PAID', amount_paid: fee.amount });
+            await updateFee(fee.id, { status: 'Paid', amount_paid: fee.amount });
             loadData();
         } catch (e) { /* ignore */ }
     };
 
     const getStatusBadge = (status) => {
         switch (status) {
-            case 'PAID': return 'bg-emerald-100 text-emerald-700';
-            case 'UNPAID': return 'bg-red-100 text-red-700';
-            case 'PARTIAL': return 'bg-amber-100 text-amber-700';
+            case 'Paid': return 'bg-emerald-100 text-emerald-700';
+            case 'Unpaid': return 'bg-red-100 text-red-700';
+            case 'Partial': return 'bg-amber-100 text-amber-700';
             default: return 'bg-gray-100 text-gray-700';
         }
     };
@@ -223,7 +227,7 @@ const AdminFees = () => {
                     className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white font-medium focus:outline-none focus:ring-2 focus:ring-primary/20">
                     <option value="">All Status</option>
                     <option value="PAID">Paid</option>
-                    <option value="UNPAID">Unpaid</option>
+                    <option value="Unpaid">Unpaid</option>
                     <option value="PARTIAL">Partial</option>
                 </select>
             </div>
@@ -261,7 +265,7 @@ const AdminFees = () => {
                                     </td>
                                     <td className="py-3 px-5">
                                         <div className="flex items-center justify-center gap-1">
-                                            {fee.status !== 'PAID' && (
+                                            {fee.status !== 'Paid' && (
                                                 <button onClick={() => handleMarkPaid(fee)} title="Mark Paid"
                                                     className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 transition-colors">
                                                     <CheckCircle className="w-4 h-4" />
@@ -375,7 +379,7 @@ const AdminFees = () => {
                                         <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                                         <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
                                             className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                            <option value="UNPAID">Unpaid</option>
+                                            <option value="Unpaid">Unpaid</option>
                                             <option value="PARTIAL">Partial</option>
                                             <option value="PAID">Paid</option>
                                         </select>

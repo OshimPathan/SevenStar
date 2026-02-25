@@ -16,6 +16,16 @@ app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', cred
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
+// Friendly root handler for serverless base URL
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'Seven Star School API',
+    hint: 'Use /api/health or other /api/* routes',
+    endpoints: ['/api/health', '/api/auth/*', '/api/admin/*', '/api/teacher/*', '/api/student/*']
+  })
+})
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Seven Star School API is running' })
 })
@@ -31,4 +41,3 @@ app.use((err, req, res, next) => {
 })
 
 export default app
-

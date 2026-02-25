@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Plus, X, Loader2, Search, AlertCircle } from 'lucide-react';
+import { Package, Plus, X, Loader2, Search, AlertCircle, CheckCircle, Calendar, DollarSign, Hash } from 'lucide-react';
 import { getInventoryItems, addInventoryItem, updateInventoryItem, deleteInventoryItem } from '../../api';
+import FormField from '../../components/FormField';
 
 const AdminInventory = () => {
     const [items, setItems] = useState([]);
@@ -81,19 +82,46 @@ const AdminInventory = () => {
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-                        <div className="p-6 border-b border-gray-100 flex justify-between"><h3 className="text-lg font-bold">{editId ? 'Edit Item' : 'Add Item'}</h3><button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button></div>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-bold">{editId ? 'Edit Item' : 'Add Inventory Item'}</h3>
+                                <p className="text-sm text-gray-500 mt-0.5">{editId ? 'Update item details' : 'Track school assets and supplies'}</p>
+                            </div>
+                            <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+                        </div>
                         <form onSubmit={handleSave} className="p-6 space-y-4">
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Item Name *</label><input required value={form.item_name} onChange={e => setForm({ ...form, item_name: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Category</label><select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"><option value="">Select</option>{categories.map(c => <option key={c}>{c}</option>)}</select></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Quantity</label><input type="number" min="0" value={form.quantity} onChange={e => setForm({ ...form, quantity: parseInt(e.target.value) || 0 })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
+                            <FormField label="Item Name" name="item_name" required icon={Package}
+                                value={form.item_name} onChange={e => setForm({ ...form, item_name: e.target.value })}
+                                placeholder="e.g. Student Desk, Whiteboard, Projector"
+                                helper="Descriptive name for the inventory item" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Category" name="category" type="select"
+                                    value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                                    helper="Classify for easy tracking"
+                                    options={[{ value: '', label: 'Select category' }, ...categories.map(c => ({ value: c, label: c }))]} />
+                                <FormField label="Quantity" name="quantity" type="number" icon={Hash}
+                                    value={form.quantity} onChange={e => setForm({ ...form, quantity: parseInt(e.target.value) || 0 })}
+                                    min={0} helper="Total number of items" />
                             </div>
-                            <div className="grid grid-cols-3 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Unit Price</label><input type="number" value={form.unit_price} onChange={e => setForm({ ...form, unit_price: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Purchase Date</label><input type="date" value={form.purchase_date} onChange={e => setForm({ ...form, purchase_date: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Status</label><select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">{statuses.map(s => <option key={s}>{s}</option>)}</select></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <FormField label="Unit Price (Rs.)" name="unit_price" type="number" icon={DollarSign}
+                                    value={form.unit_price} onChange={e => setForm({ ...form, unit_price: e.target.value })}
+                                    min={0} helper="Price per unit" />
+                                <FormField label="Purchase Date" name="purchase_date" type="date" icon={Calendar}
+                                    value={form.purchase_date} onChange={e => setForm({ ...form, purchase_date: e.target.value })}
+                                    helper="When was it purchased?" />
+                                <FormField label="Condition" name="status" type="select"
+                                    value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
+                                    helper="Current item condition"
+                                    options={statuses.map(s => ({ value: s, label: s }))} />
                             </div>
-                            <div className="flex gap-3 pt-2"><button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button><button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5">{saving ? 'Saving...' : editId ? 'Save' : 'Add'}</button></div>
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 flex items-center justify-center gap-2">
+                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {saving ? 'Saving...' : editId ? 'Save Changes' : 'Add Item'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>

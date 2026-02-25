@@ -17,6 +17,11 @@ export default {
                     light: '#ffc94d',
                     dark: '#ec9f10',
                 },
+                sidebar: {
+                    DEFAULT: '#0c1e3c',
+                    dark: '#081631',
+                    light: '#132d54',
+                },
                 background: '#f8f8f8',
             },
             fontFamily: {

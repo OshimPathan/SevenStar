@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, X, Trash2, Edit2, Image, Upload, Star, StarOff, Loader2, AlertCircle, CheckCircle, Search, ImageOff, GripVertical } from 'lucide-react';
+import { Plus, X, Trash2, Edit2, Image, Upload, Star, StarOff, Loader2, AlertCircle, CheckCircle, Search, ImageOff, GripVertical, FileText } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getGalleryPhotos, uploadGalleryPhoto, updateGalleryPhoto, deleteGalleryPhoto } from '../../api';
+import FormField from '../../components/FormField';
 
 const CATEGORIES = [
     { value: 'general', label: 'General' },
@@ -254,24 +255,20 @@ const AdminGallery = () => {
                                     <p className="text-sm text-gray-600">Editing photo details (image cannot be replaced)</p>
                                 </div>
                             )}
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                                <input type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Photo title" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={2}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" placeholder="Optional description" />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                                    <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
-                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20">
-                                        {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
-                                    </select>
-                                </div>
+                            <FormField label="Title" name="title" icon={FileText}
+                                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
+                                placeholder="Photo title"
+                                helper="Descriptive title for the gallery" />
+                            <FormField label="Description" name="description" type="textarea"
+                                value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                                rows={2} maxLength={300}
+                                placeholder="Optional description"
+                                helper="Brief caption shown below the photo" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <FormField label="Category" name="category" type="select"
+                                    value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                                    helper="Organize your gallery"
+                                    options={CATEGORIES.map(c => ({ value: c.value, label: c.label }))} />
                                 <div className="flex items-end">
                                     <label className="flex items-center gap-2 cursor-pointer pb-2.5">
                                         <input type="checkbox" checked={form.is_featured} onChange={e => setForm({ ...form, is_featured: e.target.checked })}

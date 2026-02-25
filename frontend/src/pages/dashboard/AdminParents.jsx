@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, X, Trash2, Eye, Users2, CheckCircle, AlertCircle, Loader2, Link2, Edit3 } from 'lucide-react';
+import { Search, Plus, X, Trash2, Eye, Users2, CheckCircle, AlertCircle, Loader2, Link2, Edit3, Mail, User } from 'lucide-react';
 import { getParents, getStudents, createParent, deleteParent, updateParent } from '../../api';
+import FormField from '../../components/FormField';
 
 const AdminParents = () => {
     const [parents, setParents] = useState([]);
@@ -301,22 +302,19 @@ const AdminParents = () => {
                         {!credentials && (
                             <form className="p-6 space-y-4" onSubmit={handleSubmit}>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                                        <input type="text" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Parent full name" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                                        <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="parent@email.com" />
-                                    </div>
+                                    <FormField label="Full Name" name="name" required icon={User}
+                                        value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                                        placeholder="Parent's full name"
+                                        helper="As per official records" />
+                                    <FormField label="Email" name="email" type="email" required icon={Mail}
+                                        value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+                                        placeholder="parent@email.com"
+                                        helper="Used for login credentials" />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                    <input type="text" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Default: parent123" />
-                                </div>
+                                <FormField label="Password" name="password"
+                                    value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                                    placeholder="Default: parent123"
+                                    helper="Leave blank to use default password" />
 
                                 {/* Link to Students */}
                                 <div>

@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Search, Plus, X, Trash2, Eye, Edit2, GraduationCap, CheckCircle, AlertCircle, Loader2, Upload, Camera, FileText, User, SlidersHorizontal, Download, DollarSign, FileUp } from 'lucide-react';
+import { Search, Plus, X, Trash2, Eye, Edit2, GraduationCap, CheckCircle, AlertCircle, Loader2, Upload, Camera, FileText, User, SlidersHorizontal, Download, DollarSign, FileUp, Mail, Phone, MapPin, Calendar, Hash } from 'lucide-react';
 import { getStudents, getClasses, createStudent, updateStudent, deleteStudent, uploadStudentPhoto, uploadStudentCertificate, getStudentPerformance, createBulkFees, bulkCreateStudents } from '../../api';
 import CSVImportModal from '../../components/CSVImportModal';
+import FormField from '../../components/FormField';
 
 const AdminStudents = () => {
     const [students, setStudents] = useState([]);
@@ -198,7 +199,7 @@ const AdminStudents = () => {
         }
     };
 
-    const inputClass = "w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary";
+    const inputClass = "w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-h-[44px]";
     const labelClass = "block text-sm font-medium text-gray-700 mb-1";
 
     // Quick stats
@@ -669,77 +670,51 @@ const AdminStudents = () => {
                                     {/* Tab: Personal Info */}
                                     {activeTab === 'personal' && (
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            <div className="sm:col-span-2">
-                                                <label className={labelClass}>Full Name *</label>
-                                                <input type="text" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                                                    className={inputClass} placeholder="Student's full name as per records" />
-                                            </div>
-                                            <div>
-                                                <label className={labelClass}>Email *</label>
-                                                <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                                                    className={inputClass} placeholder="student@sevenstar.edu.np" />
-                                            </div>
+                                            <FormField label="Full Name" name="name" required icon={User}
+                                                value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                                                placeholder="Student's full name as per birth certificate"
+                                                helper="Enter the student's legal full name"
+                                                className="sm:col-span-2" />
+                                            <FormField label="Email" name="email" type="email" required icon={Mail}
+                                                value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+                                                placeholder="student@sevenstar.edu.np"
+                                                helper="This will be used for login credentials" />
                                             {!editingStudent && (
-                                                <div>
-                                                    <label className={labelClass}>Password</label>
-                                                    <input type="text" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                                                        className={inputClass} placeholder="Default: student123" />
-                                                </div>
+                                                <FormField label="Password" name="password"
+                                                    value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                                                    placeholder="Default: student123"
+                                                    helper="Leave blank to use default password" />
                                             )}
-                                            <div>
-                                                <label className={labelClass}>Class *</label>
-                                                <select required value={form.class_id} onChange={e => setForm({ ...form, class_id: e.target.value })}
-                                                    className={`${inputClass} bg-white`}>
-                                                    <option value="">Select class</option>
-                                                    {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section || ''}</option>)}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className={labelClass}>Roll Number</label>
-                                                <input type="number" value={form.roll_number} onChange={e => setForm({ ...form, roll_number: e.target.value })}
-                                                    className={inputClass} placeholder="1" />
-                                            </div>
-                                            <div>
-                                                <label className={labelClass}>Gender *</label>
-                                                <select required value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}
-                                                    className={`${inputClass} bg-white`}>
-                                                    <option value="">Select gender</option>
-                                                    <option value="Male">Male</option>
-                                                    <option value="Female">Female</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className={labelClass}>Date of Birth *</label>
-                                                <input type="date" required value={form.date_of_birth} onChange={e => setForm({ ...form, date_of_birth: e.target.value })}
-                                                    className={inputClass} />
-                                            </div>
-                                            <div>
-                                                <label className={labelClass}>Blood Group</label>
-                                                <select value={form.blood_group} onChange={e => setForm({ ...form, blood_group: e.target.value })}
-                                                    className={`${inputClass} bg-white`}>
-                                                    <option value="">Select</option>
-                                                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => <option key={bg} value={bg}>{bg}</option>)}
-                                                </select>
-                                            </div>
-                                            <div>
-                                                <label className={labelClass}>Nationality</label>
-                                                <input type="text" value={form.nationality} onChange={e => setForm({ ...form, nationality: e.target.value })}
-                                                    className={inputClass} placeholder="Nepali" />
-                                            </div>
-                                            <div>
-                                                <label className={labelClass}>Religion</label>
-                                                <select value={form.religion} onChange={e => setForm({ ...form, religion: e.target.value })}
-                                                    className={`${inputClass} bg-white`}>
-                                                    <option value="">Select</option>
-                                                    {['Hindu', 'Buddhist', 'Muslim', 'Christian', 'Kirant', 'Other'].map(r => <option key={r} value={r}>{r}</option>)}
-                                                </select>
-                                            </div>
-                                            <div className="sm:col-span-2">
-                                                <label className={labelClass}>Address *</label>
-                                                <input type="text" required value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
-                                                    className={inputClass} placeholder="Full address (Ward, Municipality, District)" />
-                                            </div>
+                                            <FormField label="Class" name="class_id" type="select" required
+                                                value={form.class_id} onChange={e => setForm({ ...form, class_id: e.target.value })}
+                                                helper="Assign the student to a class"
+                                                options={[{ value: '', label: 'Select class' }, ...classes.map(c => ({ value: c.id, label: `${c.name} ${c.section || ''}` }))]} />
+                                            <FormField label="Roll Number" name="roll_number" type="number" icon={Hash}
+                                                value={form.roll_number} onChange={e => setForm({ ...form, roll_number: e.target.value })}
+                                                placeholder="1" min="1"
+                                                helper="Unique roll number within the class" />
+                                            <FormField label="Gender" name="gender" type="select" required
+                                                value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value })}
+                                                options={[{ value: '', label: 'Select gender' }, { value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }]} />
+                                            <FormField label="Date of Birth" name="date_of_birth" type="date" required icon={Calendar}
+                                                value={form.date_of_birth} onChange={e => setForm({ ...form, date_of_birth: e.target.value })}
+                                                helper="Student must be between 3-20 years old"
+                                                max={new Date(new Date().setFullYear(new Date().getFullYear() - 3)).toISOString().split('T')[0]} />
+                                            <FormField label="Blood Group" name="blood_group" type="select"
+                                                value={form.blood_group} onChange={e => setForm({ ...form, blood_group: e.target.value })}
+                                                helper="Important for medical emergencies"
+                                                options={[{ value: '', label: 'Select blood group' }, ...['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => ({ value: bg, label: bg }))]} />
+                                            <FormField label="Nationality" name="nationality"
+                                                value={form.nationality} onChange={e => setForm({ ...form, nationality: e.target.value })}
+                                                placeholder="Nepali" />
+                                            <FormField label="Religion" name="religion" type="select"
+                                                value={form.religion} onChange={e => setForm({ ...form, religion: e.target.value })}
+                                                options={[{ value: '', label: 'Select religion' }, ...['Hindu', 'Buddhist', 'Muslim', 'Christian', 'Kirant', 'Other'].map(r => ({ value: r, label: r }))]} />
+                                            <FormField label="Address" name="address" required icon={MapPin}
+                                                value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
+                                                placeholder="Ward No., Municipality/VDC, District"
+                                                helper="Full permanent address"
+                                                className="sm:col-span-2" />
                                         </div>
                                     )}
 
@@ -749,27 +724,27 @@ const AdminStudents = () => {
                                             <div>
                                                 <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Father / Guardian</h4>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className={labelClass}>Father/Guardian Name *</label>
-                                                        <input type="text" required value={form.parent_name} onChange={e => setForm({ ...form, parent_name: e.target.value })}
-                                                            className={inputClass} placeholder="Father or guardian's full name" />
-                                                    </div>
-                                                    <div>
-                                                        <label className={labelClass}>Phone *</label>
-                                                        <input type="tel" required value={form.parent_phone} onChange={e => setForm({ ...form, parent_phone: e.target.value })}
-                                                            className={inputClass} placeholder="98XXXXXXXX" />
-                                                    </div>
-                                                    <div>
-                                                        <label className={labelClass}>Email</label>
-                                                        <input type="email" value={form.parent_email} onChange={e => setForm({ ...form, parent_email: e.target.value })}
-                                                            className={inputClass} placeholder="father@email.com" />
-                                                    </div>
+                                                    <FormField label="Father/Guardian Name" name="parent_name" required icon={User}
+                                                        value={form.parent_name} onChange={e => setForm({ ...form, parent_name: e.target.value })}
+                                                        placeholder="Father or guardian's full name"
+                                                        helper="Legal guardian responsible for the student" />
+                                                    <FormField label="Phone" name="parent_phone" type="tel" required icon={Phone}
+                                                        value={form.parent_phone} onChange={e => setForm({ ...form, parent_phone: e.target.value })}
+                                                        placeholder="98XXXXXXXX"
+                                                        helper="10-digit mobile number" />
+                                                    <FormField label="Email" name="parent_email" type="email" icon={Mail}
+                                                        value={form.parent_email} onChange={e => setForm({ ...form, parent_email: e.target.value })}
+                                                        placeholder="father@email.com"
+                                                        helper="Required if creating parent login account" />
                                                     {!editingStudent && (
                                                         <div className="flex items-end">
                                                             <label className="flex items-center gap-2 cursor-pointer pb-2.5">
                                                                 <input type="checkbox" checked={form.create_parent_account} onChange={e => setForm({ ...form, create_parent_account: e.target.checked })}
                                                                     className="w-4 h-4 text-primary rounded border-gray-300 focus:ring-primary" />
-                                                                <span className="text-sm text-gray-700">Create parent login account</span>
+                                                                <div>
+                                                                    <span className="text-sm text-gray-700 font-medium">Create parent login</span>
+                                                                    <p className="text-[11px] text-gray-400">Parent can track attendance, fees & results</p>
+                                                                </div>
                                                             </label>
                                                         </div>
                                                     )}
@@ -778,25 +753,21 @@ const AdminStudents = () => {
                                             <div className="border-t border-gray-100 pt-5">
                                                 <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Mother</h4>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <label className={labelClass}>Mother's Name</label>
-                                                        <input type="text" value={form.mother_name} onChange={e => setForm({ ...form, mother_name: e.target.value })}
-                                                            className={inputClass} placeholder="Mother's full name" />
-                                                    </div>
-                                                    <div>
-                                                        <label className={labelClass}>Mother's Phone</label>
-                                                        <input type="tel" value={form.mother_phone} onChange={e => setForm({ ...form, mother_phone: e.target.value })}
-                                                            className={inputClass} placeholder="98XXXXXXXX" />
-                                                    </div>
+                                                    <FormField label="Mother's Name" name="mother_name" icon={User}
+                                                        value={form.mother_name} onChange={e => setForm({ ...form, mother_name: e.target.value })}
+                                                        placeholder="Mother's full name" />
+                                                    <FormField label="Mother's Phone" name="mother_phone" type="tel" icon={Phone}
+                                                        value={form.mother_phone} onChange={e => setForm({ ...form, mother_phone: e.target.value })}
+                                                        placeholder="98XXXXXXXX"
+                                                        helper="Optional — 10-digit mobile number" />
                                                 </div>
                                             </div>
                                             <div className="border-t border-gray-100 pt-5">
                                                 <h4 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Emergency</h4>
-                                                <div>
-                                                    <label className={labelClass}>Emergency Contact Number</label>
-                                                    <input type="tel" value={form.emergency_contact} onChange={e => setForm({ ...form, emergency_contact: e.target.value })}
-                                                        className={inputClass} placeholder="Emergency phone number" />
-                                                </div>
+                                                <FormField label="Emergency Contact Number" name="emergency_contact" type="tel" icon={Phone}
+                                                    value={form.emergency_contact} onChange={e => setForm({ ...form, emergency_contact: e.target.value })}
+                                                    placeholder="Emergency phone number"
+                                                    helper="Alternate contact for emergencies (neighbor, relative)" />
                                             </div>
                                         </div>
                                     )}
@@ -804,28 +775,29 @@ const AdminStudents = () => {
                                     {/* Tab: Academic History */}
                                     {activeTab === 'academic' && (
                                         <div className="space-y-4">
-                                            <p className="text-sm text-gray-500 mb-2">Enter details about the student's previous school and academic record.</p>
+                                            <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl">
+                                                <p className="text-sm text-blue-600 font-medium">📋 Previous Academic Record</p>
+                                                <p className="text-xs text-blue-500 mt-0.5">Fill in details from the student's previous school. All fields are optional.</p>
+                                            </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div className="sm:col-span-2">
-                                                    <label className={labelClass}>Previous School Name</label>
-                                                    <input type="text" value={form.previous_school} onChange={e => setForm({ ...form, previous_school: e.target.value })}
-                                                        className={inputClass} placeholder="Name of the previous school attended" />
-                                                </div>
-                                                <div>
-                                                    <label className={labelClass}>Previous Class / Grade</label>
-                                                    <input type="text" value={form.previous_class} onChange={e => setForm({ ...form, previous_class: e.target.value })}
-                                                        className={inputClass} placeholder="e.g. Class 8 / Grade 8" />
-                                                </div>
-                                                <div>
-                                                    <label className={labelClass}>Marks / GPA Obtained</label>
-                                                    <input type="text" value={form.previous_marks} onChange={e => setForm({ ...form, previous_marks: e.target.value })}
-                                                        className={inputClass} placeholder="e.g. 3.6 GPA or 85%" />
-                                                </div>
-                                                <div className="sm:col-span-2">
-                                                    <label className={labelClass}>Transfer Certificate (TC) Number</label>
-                                                    <input type="text" value={form.transfer_certificate} onChange={e => setForm({ ...form, transfer_certificate: e.target.value })}
-                                                        className={inputClass} placeholder="TC number from previous school" />
-                                                </div>
+                                                <FormField label="Previous School Name" name="previous_school"
+                                                    value={form.previous_school} onChange={e => setForm({ ...form, previous_school: e.target.value })}
+                                                    placeholder="Name of the previous school attended"
+                                                    helper="Full name with location"
+                                                    className="sm:col-span-2" />
+                                                <FormField label="Previous Class / Grade" name="previous_class"
+                                                    value={form.previous_class} onChange={e => setForm({ ...form, previous_class: e.target.value })}
+                                                    placeholder="e.g. Class 8 / Grade 8"
+                                                    helper="Last class/grade completed" />
+                                                <FormField label="Marks / GPA Obtained" name="previous_marks"
+                                                    value={form.previous_marks} onChange={e => setForm({ ...form, previous_marks: e.target.value })}
+                                                    placeholder="e.g. 3.6 GPA or 85%"
+                                                    helper="Final result from previous school" />
+                                                <FormField label="Transfer Certificate (TC) Number" name="transfer_certificate"
+                                                    value={form.transfer_certificate} onChange={e => setForm({ ...form, transfer_certificate: e.target.value })}
+                                                    placeholder="TC number from previous school"
+                                                    helper="Required for transfer admissions"
+                                                    className="sm:col-span-2" />
                                             </div>
                                         </div>
                                     )}

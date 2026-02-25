@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Plus, X, Search, Loader2, Trash2, RefreshCw, ArrowRight, AlertCircle } from 'lucide-react';
+import { BookOpen, Plus, X, Search, Loader2, Trash2, RefreshCw, ArrowRight, AlertCircle, Type, User, Hash, Layers, CheckCircle } from 'lucide-react';
 import { getLibraryBooks, addLibraryBook, updateLibraryBook, deleteLibraryBook, getLibraryIssues, issueBook, returnBook } from '../../api';
+import FormField from '../../components/FormField';
 
 const AdminLibrary = () => {
     const [books, setBooks] = useState([]);
@@ -55,7 +56,7 @@ const AdminLibrary = () => {
 
     return (
         <div className="space-y-6 animate-fade-in-up">
-            {toast && <div className={`fixed top-4 right-4 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}><AlertCircle className="w-4 h-4" />{toast.msg}</div>}
+            {toast && <div className={`fixed top-4 right-4 z-[100] flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>{toast.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}{toast.msg}</div>}
 
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
                 <div>
@@ -159,22 +160,36 @@ const AdminLibrary = () => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
                         <div className="p-6 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="text-lg font-bold">{editId ? 'Edit Book' : 'Add Book'}</h3>
+                            <div>
+                                <h3 className="text-lg font-bold">{editId ? 'Edit Book' : 'Add New Book'}</h3>
+                                <p className="text-sm text-gray-500 mt-0.5">{editId ? 'Update book details' : 'Add a new book to the library catalog'}</p>
+                            </div>
                             <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
                         </div>
                         <form onSubmit={handleSave} className="p-6 space-y-4">
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Title *</label><input required type="text" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Author</label><input type="text" value={form.author} onChange={e => setForm({ ...form, author: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">ISBN</label><input type="text" value={form.isbn} onChange={e => setForm({ ...form, isbn: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
+                            <FormField label="Book Title" name="title" required icon={BookOpen}
+                                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
+                                placeholder="e.g. The Great Gatsby, Physics Vol. 1"
+                                helper="Full title of the book" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Author" name="author" icon={User}
+                                    value={form.author} onChange={e => setForm({ ...form, author: e.target.value })}
+                                    placeholder="e.g. F. Scott Fitzgerald"
+                                    helper="Author's full name" />
+                                <FormField label="ISBN" name="isbn" icon={Hash}
+                                    value={form.isbn} onChange={e => setForm({ ...form, isbn: e.target.value })}
+                                    placeholder="e.g. 978-0-06-112008-4"
+                                    helper="13-digit International Standard Book Number" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                                    <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                        <option value="">Select</option>{categories.map(c => <option key={c}>{c}</option>)}
-                                    </select>
-                                </div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Total Copies</label><input type="number" min="1" value={form.total_copies} onChange={e => setForm({ ...form, total_copies: parseInt(e.target.value) || 1 })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Category" name="category" type="select" icon={Layers}
+                                    value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}
+                                    helper="Classify the book for easy discovery"
+                                    options={[{ value: '', label: 'Select category' }, ...categories.map(c => ({ value: c, label: c }))]} />
+                                <FormField label="Total Copies" name="total_copies" type="number"
+                                    value={form.total_copies} onChange={e => setForm({ ...form, total_copies: parseInt(e.target.value) || 1 })}
+                                    min={1}
+                                    helper="How many copies does the library own?" />
                             </div>
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>

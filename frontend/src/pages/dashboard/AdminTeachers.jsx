@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Search, Plus, X, Trash2, Eye, Edit2, Users, CheckCircle, AlertCircle, Loader2, Mail, Phone, BookOpen, FileUp, GraduationCap, MapPin, Calendar, Award } from 'lucide-react';
 import { getTeachers, createTeacher, updateTeacher, deleteTeacher, getTeacherHistory, bulkCreateTeachers, uploadTeacherPhoto, getClasses, getSubjectsByClass, assignTeacherToSubject, getTeacherLoad, removeTeacherAssignment } from '../../api';
 import CSVImportModal from '../../components/CSVImportModal';
+import FormField from '../../components/FormField';
 
 const AdminTeachers = () => {
     const [teachers, setTeachers] = useState([]);
@@ -543,46 +544,42 @@ const AdminTeachers = () => {
                                 <div className="border-t border-gray-100 pt-4">
                                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Basic Information</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-                                            <input type="text" required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Teacher full name" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                                            <input type="email" required value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="teacher@sevenstar.edu.np" />
-                                        </div>
+                                        <FormField label="Full Name" name="name" required icon={Users}
+                                            value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                                            placeholder="Teacher's full name"
+                                            helper="As per official records" />
+                                        <FormField label="Email" name="email" type="email" required icon={Mail}
+                                            value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
+                                            placeholder="teacher@sevenstar.edu.np"
+                                            helper="Used for login credentials" />
                                     </div>
                                 </div>
 
                                 {!editingTeacher && (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                                        <input type="text" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Default: teacher123" />
-                                    </div>
+                                    <FormField label="Password" name="password"
+                                        value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                                        placeholder="Default: teacher123"
+                                        helper="Leave blank to use default password" />
                                 )}
 
                                 {/* Contact & Qualifications */}
                                 <div className="border-t border-gray-100 pt-4">
                                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Contact & Qualifications</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                                            <input type="tel" value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="98XXXXXXXX" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Qualification</label>
-                                            <input type="text" value={form.qualification} onChange={e => setForm({ ...form, qualification: e.target.value })}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="e.g. M.Sc. Mathematics" />
-                                        </div>
+                                        <FormField label="Phone Number" name="phone" type="tel" icon={Phone}
+                                            value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })}
+                                            placeholder="98XXXXXXXX"
+                                            helper="10-digit mobile number" />
+                                        <FormField label="Qualification" name="qualification" icon={Award}
+                                            value={form.qualification} onChange={e => setForm({ ...form, qualification: e.target.value })}
+                                            placeholder="e.g. M.Sc. Mathematics, B.Ed"
+                                            helper="Highest academic qualification" />
                                     </div>
                                     <div className="mt-4">
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                        <input type="text" value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="Full address" />
+                                        <FormField label="Address" name="address" icon={MapPin}
+                                            value={form.address} onChange={e => setForm({ ...form, address: e.target.value })}
+                                            placeholder="Ward No., Municipality, District"
+                                            helper="Full permanent address" />
                                     </div>
                                 </div>
 
@@ -590,17 +587,12 @@ const AdminTeachers = () => {
                                 <div className="border-t border-gray-100 pt-4">
                                     <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Employment Dates</h4>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Joining Date</label>
-                                            <input type="date" value={form.joined_date} onChange={e => setForm({ ...form, joined_date: e.target.value })}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Leave Date</label>
-                                            <input type="date" value={form.leave_date} onChange={e => setForm({ ...form, leave_date: e.target.value })}
-                                                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                                            <p className="text-[10px] text-gray-400 mt-1">Leave blank if currently active</p>
-                                        </div>
+                                        <FormField label="Joining Date" name="joined_date" type="date" icon={Calendar}
+                                            value={form.joined_date} onChange={e => setForm({ ...form, joined_date: e.target.value })}
+                                            helper="First day of employment" />
+                                        <FormField label="Leave Date" name="leave_date" type="date" icon={Calendar}
+                                            value={form.leave_date} onChange={e => setForm({ ...form, leave_date: e.target.value })}
+                                            helper="Leave blank if currently active" />
                                     </div>
                                 </div>
 

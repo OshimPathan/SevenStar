@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Edit2, Bell, Megaphone, AlertTriangle, Info, CheckCircle, AlertCircle, Loader2, Search } from 'lucide-react';
+import { Plus, X, Trash2, Edit2, Bell, Megaphone, AlertTriangle, Info, CheckCircle, AlertCircle, Loader2, Search, Type, FileText, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getNotices, createNotice, updateNotice, deleteNotice } from '../../api';
+import FormField from '../../components/FormField';
 
 const priorityConfig = {
     ALL: { color: 'bg-red-50 text-red-600 border-red-200', label: 'All Users', icon: AlertTriangle },
@@ -203,26 +204,24 @@ const AdminNotices = () => {
                             <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
                         </div>
                         <form className="p-6 space-y-4" onSubmit={handleSubmit}>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-                                <input type="text" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="e.g. Second Terminal Exam Routine Published" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Content *</label>
-                                <textarea required value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} rows={5}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" placeholder="Write the notice content here..." />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Target Audience *</label>
-                                <select required value={form.target_role} onChange={e => setForm({ ...form, target_role: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                    <option value="ALL">All Users</option>
-                                    <option value="STUDENT">Students Only</option>
-                                    <option value="TEACHER">Teachers Only</option>
-                                    <option value="PARENT">Parents Only</option>
-                                </select>
-                            </div>
+                            <FormField label="Title" name="title" required icon={Type}
+                                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
+                                placeholder="e.g. Second Terminal Exam Routine Published"
+                                helper="Brief, attention-grabbing title for the notice" />
+                            <FormField label="Content" name="content" type="textarea" required
+                                value={form.content} onChange={e => setForm({ ...form, content: e.target.value })}
+                                placeholder="Write the notice content here. Include dates, instructions, and any important details..."
+                                helper="Full notice content visible to the target audience"
+                                rows={5} maxLength={2000} />
+                            <FormField label="Target Audience" name="target_role" type="select" required icon={Users}
+                                value={form.target_role} onChange={e => setForm({ ...form, target_role: e.target.value })}
+                                helper={`This notice will be visible to ${priorityConfig[form.target_role]?.label || 'All Users'}`}
+                                options={[
+                                    { value: 'ALL', label: '📢 All Users — Everyone sees this notice' },
+                                    { value: 'STUDENT', label: '🎓 Students Only — Only students can see' },
+                                    { value: 'TEACHER', label: '👨‍🏫 Teachers Only — Only teachers can see' },
+                                    { value: 'PARENT', label: '👪 Parents Only — Only parents can see' },
+                                ]} />
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => { setShowModal(false); resetForm(); }}
                                     className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>

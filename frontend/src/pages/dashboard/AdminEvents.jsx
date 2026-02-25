@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Edit2, Calendar, MapPin, Clock, Loader2, Search, CalendarDays, AlertCircle, CheckCircle } from 'lucide-react';
+import { Plus, X, Trash2, Edit2, Calendar, MapPin, Clock, Loader2, Search, CalendarDays, AlertCircle, CheckCircle, FileText, Type } from 'lucide-react';
 import { getEvents, createEvent, updateEvent, deleteEvent } from '../../api';
+import FormField from '../../components/FormField';
 
 const AdminEvents = () => {
     const [events, setEvents] = useState([]);
@@ -48,6 +49,10 @@ const AdminEvents = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (form.end_date && form.start_date && form.end_date < form.start_date) {
+            showToast('End date cannot be before start date', 'error');
+            return;
+        }
         setSaving(true);
         try {
             if (editing) {
@@ -209,38 +214,34 @@ const AdminEvents = () => {
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900">{editing ? 'Edit Event' : 'Create New Event'}</h3>
-                                <p className="text-sm text-gray-500 mt-0.5">{editing ? 'Update event details' : 'Add a new college event'}</p>
+                                <p className="text-sm text-gray-500 mt-0.5">{editing ? 'Update event details' : 'Add a new school event or activity'}</p>
                             </div>
                             <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
                         </div>
                         <form className="p-6 space-y-4" onSubmit={handleSubmit}>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Event Title *</label>
-                                <input type="text" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="e.g. Annual Sports Day 2025" />
+                            <FormField label="Event Title" name="title" required icon={Type}
+                                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
+                                placeholder="e.g. Annual Sports Day 2025"
+                                helper="Short, descriptive title for the event" />
+                            <FormField label="Description" name="description" type="textarea"
+                                value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                                placeholder="Describe the event details, schedule, and requirements..."
+                                helper="Provide full details about the event"
+                                rows={4} maxLength={1000} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Start Date" name="start_date" type="date" required icon={Calendar}
+                                    value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })}
+                                    helper="When does the event begin?" />
+                                <FormField label="End Date" name="end_date" type="date" icon={Calendar}
+                                    value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })}
+                                    helper="Leave blank for single-day events"
+                                    min={form.start_date || undefined}
+                                    error={form.end_date && form.start_date && form.end_date < form.start_date ? 'Must be after start date' : ''} />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={4}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none" placeholder="Event details..." />
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
-                                    <input type="date" required value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })}
-                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                                    <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })}
-                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                                </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                                <input type="text" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="e.g. Main Auditorium" />
-                            </div>
+                            <FormField label="Location" name="location" icon={MapPin}
+                                value={form.location} onChange={e => setForm({ ...form, location: e.target.value })}
+                                placeholder="e.g. Main Auditorium, Ground Floor"
+                                helper="Where will the event take place?" />
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => { setShowModal(false); resetForm(); }}
                                     className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>

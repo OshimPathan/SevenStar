@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Plus, X, Loader2, Trash2, AlertCircle } from 'lucide-react';
+import { Calendar, Plus, X, Loader2, Trash2, AlertCircle, Clock, BookOpen, MapPin, Hash } from 'lucide-react';
 import { getTimetableForClass, saveTimetableSlot, deleteTimetableSlot, getAllClasses, getSubjectsByClass, getActiveAcademicYear } from '../../api';
+import FormField from '../../components/FormField';
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const PERIODS = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -118,19 +119,47 @@ const AdminTimetable = () => {
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-                        <div className="p-6 border-b border-gray-100 flex justify-between"><h3 className="text-lg font-bold">Add Timetable Slot</h3><button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button></div>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-bold">Add Timetable Slot</h3>
+                                <p className="text-sm text-gray-500 mt-0.5">Schedule a period for a subject</p>
+                            </div>
+                            <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+                        </div>
                         <form onSubmit={handleSave} className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Day *</label><select required value={form.day_of_week} onChange={e => setForm({ ...form, day_of_week: parseInt(e.target.value) })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">{DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}</select></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Period *</label><select required value={form.period} onChange={e => setForm({ ...form, period: parseInt(e.target.value) })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">{PERIODS.map(p => <option key={p} value={p}>Period {p}</option>)}</select></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Day" name="day_of_week" type="select" required icon={Calendar}
+                                    value={form.day_of_week} onChange={e => setForm({ ...form, day_of_week: parseInt(e.target.value) })}
+                                    helper="Which day of the week?"
+                                    options={DAYS.map((d, i) => ({ value: i, label: d }))} />
+                                <FormField label="Period" name="period" type="select" required icon={Hash}
+                                    value={form.period} onChange={e => setForm({ ...form, period: parseInt(e.target.value) })}
+                                    helper="Period number (1-8)"
+                                    options={PERIODS.map(p => ({ value: p, label: `Period ${p}` }))} />
                             </div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Subject</label><select value={form.class_subject_id} onChange={e => setForm({ ...form, class_subject_id: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"><option value="">Select</option>{subjects.map(s => <option key={s.id} value={s.class_subject_id || s.id}>{s.name}</option>)}</select></div>
-                            <div className="grid grid-cols-3 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label><input type="time" value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">End Time</label><input type="time" value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Room</label><input type="text" value={form.room} onChange={e => setForm({ ...form, room: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="e.g. Room 301" /></div>
+                            <FormField label="Subject" name="class_subject_id" type="select" icon={BookOpen}
+                                value={form.class_subject_id} onChange={e => setForm({ ...form, class_subject_id: e.target.value })}
+                                helper="Subject to assign for this slot"
+                                options={[{ value: '', label: 'Select subject' }, ...subjects.map(s => ({ value: s.class_subject_id || s.id, label: s.name }))]} />
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <FormField label="Start Time" name="start_time" type="time" icon={Clock}
+                                    value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })}
+                                    helper="Period starts" />
+                                <FormField label="End Time" name="end_time" type="time" icon={Clock}
+                                    value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })}
+                                    helper="Period ends" />
+                                <FormField label="Room" name="room" icon={MapPin}
+                                    value={form.room} onChange={e => setForm({ ...form, room: e.target.value })}
+                                    placeholder="e.g. Room 301"
+                                    helper="Classroom location" />
                             </div>
-                            <div className="flex gap-3 pt-2"><button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button><button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5">{saving ? 'Saving...' : 'Add Slot'}</button></div>
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 flex items-center justify-center gap-2">
+                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {saving ? 'Saving...' : 'Add Slot'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>

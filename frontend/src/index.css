@@ -128,3 +128,37 @@
 .ticker-scroll.paused {
   animation-play-state: paused;
 }
+
+/* Dashboard-specific overrides */
+.dashboard-layout h1,
+.dashboard-layout h2,
+.dashboard-layout h3 {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+/* Sidebar active indicator */
+.sidebar-link-active {
+  position: relative;
+  background: rgba(255, 255, 255, 0.08);
+}
+.sidebar-link-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 0 4px 4px 0;
+  background: #fead16;
+}
+
+/* Sidebar section label */
+.sidebar-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.25);
+  padding: 20px 16px 8px;
+}
+

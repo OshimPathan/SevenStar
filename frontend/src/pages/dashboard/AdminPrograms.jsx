@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Edit2, BookOpen, Loader2, AlertCircle, CheckCircle, Search, GraduationCap } from 'lucide-react';
+import { Plus, X, Trash2, Edit2, BookOpen, Loader2, AlertCircle, CheckCircle, Search, GraduationCap, FileText } from 'lucide-react';
 import { getProgramSubjects, createProgramSubject, updateProgramSubject, deleteProgramSubject } from '../../api';
+import FormField from '../../components/FormField';
 
 const PROGRAMS = [
     { value: 'montessori', label: 'Montessori' },
@@ -200,25 +201,19 @@ const AdminPrograms = () => {
                             <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
                         </div>
                         <form className="p-6 space-y-4" onSubmit={handleSubmit}>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Program *</label>
-                                <select required value={form.program} onChange={e => setForm({ ...form, program: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                    <option value="">Select program</option>
-                                    {PROGRAMS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Subject Name *</label>
-                                <input type="text" required value={form.subject_name} onChange={e => setForm({ ...form, subject_name: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="e.g. Accountancy" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description / Syllabus Notes</label>
-                                <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} rows={3}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
-                                    placeholder="Brief syllabus description or notes (optional)" />
-                            </div>
+                            <FormField label="Program" name="program" type="select" required icon={GraduationCap}
+                                value={form.program} onChange={e => setForm({ ...form, program: e.target.value })}
+                                helper="Which academic program does this subject belong to?"
+                                options={[{ value: '', label: 'Select program' }, ...PROGRAMS.map(p => ({ value: p.value, label: p.label }))]} />
+                            <FormField label="Subject Name" name="subject_name" required icon={BookOpen}
+                                value={form.subject_name} onChange={e => setForm({ ...form, subject_name: e.target.value })}
+                                placeholder="e.g. Accountancy"
+                                helper="Name of the subject as shown on the homepage" />
+                            <FormField label="Description / Syllabus Notes" name="description" type="textarea" icon={FileText}
+                                value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                                rows={3} maxLength={500}
+                                placeholder="Brief syllabus description or notes (optional)"
+                                helper="Optional — displayed below the subject name" />
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => { setShowModal(false); resetForm(); }}
                                     className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>

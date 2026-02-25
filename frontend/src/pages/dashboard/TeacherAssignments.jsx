@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Calendar, FileText, CheckCircle2, X, Trash2, Edit2, Users, Upload, Download, Eye, Save, AlertCircle } from 'lucide-react';
+import { Plus, Search, Calendar, FileText, CheckCircle2, X, Trash2, Edit2, Users, Upload, Download, Eye, Save, AlertCircle, BookOpen, Hash, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getTeacherAssignments, createAssignment, updateAssignment, deleteAssignment, getAssignmentSubmissions, gradeSubmission, getTeacherClasses, getTeacherSubjectsForClass } from '../../api';
+import FormField from '../../components/FormField';
 
 const TeacherAssignments = () => {
     const { user } = useAuth();
@@ -225,54 +226,48 @@ const TeacherAssignments = () => {
             {/* Create Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-bold text-gray-900">Create Assignment</h3>
+                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">Create Assignment</h3>
+                                <p className="text-sm text-gray-500 mt-0.5">Assign work to students in your class</p>
+                            </div>
                             <button onClick={() => setShowCreateModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
                         </div>
-                        <form onSubmit={handleCreate} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                                <input type="text" required value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                        <form onSubmit={handleCreate} className="p-6 space-y-4">
+                            <FormField label="Title" name="title" required icon={FileText}
+                                value={form.title} onChange={e => setForm({ ...form, title: e.target.value })}
+                                placeholder="e.g. Chapter 5 Homework"
+                                helper="Descriptive name for this assignment" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Class" name="class_id" type="select" required icon={BookOpen}
+                                    value={form.class_id} onChange={e => handleClassChange(e.target.value)}
+                                    helper="Your assigned class"
+                                    options={[{ value: '', label: 'Select Class' }, ...classes.map(c => ({ value: c.id, label: c.name }))]} />
+                                <FormField label="Section" name="section_id" type="select" required
+                                    value={form.section_id} onChange={e => setForm({ ...form, section_id: e.target.value })}
+                                    helper={sections.length === 0 ? 'Select a class first' : 'Which section?'}
+                                    options={sections.length === 0 ? [{ value: '', label: 'Select a class first' }] : sections.map(s => ({ value: s.id, label: s.name }))} />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Class</label>
-                                    <select required value={form.class_id} onChange={e => handleClassChange(e.target.value)} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-                                        <option value="">Select Class</option>
-                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                                    <select required value={form.section_id} onChange={e => setForm({ ...form, section_id: e.target.value })} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-                                        {sections.length === 0 && <option value="">Select a class first</option>}
-                                        {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                    </select>
-                                </div>
+                            <FormField label="Subject" name="subject_id" type="select" required icon={BookOpen}
+                                value={form.subject_id} onChange={e => setForm({ ...form, subject_id: e.target.value })}
+                                helper="Subject for this assignment"
+                                options={[{ value: '', label: 'Select Subject' }, ...subjects.map(s => ({ value: s.id, label: s.name }))]} />
+                            <FormField label="Description" name="description" type="textarea"
+                                value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                                rows={3} maxLength={1000}
+                                placeholder="Instructions or details for the assignment"
+                                helper="What students need to do" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Due Date" name="due_date" type="date" required icon={Calendar}
+                                    value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })}
+                                    helper="Submission deadline" />
+                                <FormField label="Total Points" name="total_points" type="number" required icon={Hash}
+                                    value={form.total_points} onChange={e => setForm({ ...form, total_points: e.target.value })}
+                                    min={1} helper="Maximum achievable score" />
                             </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
-                                <select required value={form.subject_id} onChange={e => setForm({ ...form, subject_id: e.target.value })} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-                                    <option value="">Select Subject</option>
-                                    {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <textarea rows="3" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none"></textarea>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
-                                    <input type="date" required value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Total Points</label>
-                                    <input type="number" required value={form.total_points} onChange={e => setForm({ ...form, total_points: e.target.value })} className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                                </div>
-                            </div>
-                            <button type="submit" disabled={saving} className="w-full btn-primary py-2.5 mt-2">
+                            <button type="submit" disabled={saving} className="w-full btn-primary py-2.5 mt-2 flex items-center justify-center gap-2">
+                                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
                                 {saving ? 'Creating...' : 'Create Assignment'}
                             </button>
                         </form>

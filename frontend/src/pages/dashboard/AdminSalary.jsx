@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, Plus, X, Loader2, Search, AlertCircle } from 'lucide-react';
+import { DollarSign, Plus, X, Loader2, Search, AlertCircle, CheckCircle, Users, Calendar, CreditCard } from 'lucide-react';
 import { getSalaryPayments, createSalaryPayment, deleteSalaryPayment, getTeachers } from '../../api';
+import FormField from '../../components/FormField';
 
 const AdminSalary = () => {
     const [payments, setPayments] = useState([]);
@@ -77,20 +78,42 @@ const AdminSalary = () => {
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-                        <div className="p-6 border-b border-gray-100 flex justify-between"><h3 className="text-lg font-bold">Record Salary Payment</h3><button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button></div>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-bold">Record Salary Payment</h3>
+                                <p className="text-sm text-gray-500 mt-0.5">Log a new salary payment for a staff member</p>
+                            </div>
+                            <button onClick={() => setShowModal(false)}><X className="w-5 h-5 text-gray-400" /></button>
+                        </div>
                         <form onSubmit={handleSave} className="p-6 space-y-4">
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Staff Member *</label>
-                                <select required value={form.staff_id} onChange={e => setForm({ ...form, staff_id: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"><option value="">Select</option>{staff.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.employee_id})</option>)}</select>
+                            <FormField label="Staff Member" name="staff_id" type="select" required icon={Users}
+                                value={form.staff_id} onChange={e => setForm({ ...form, staff_id: e.target.value })}
+                                helper="Select the teacher or staff to pay"
+                                options={[{ value: '', label: 'Select staff member' }, ...staff.map(s => ({ value: s.id, label: `${s.first_name} ${s.last_name} (${s.employee_id})` }))]} />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Amount (Rs.)" name="amount" type="number" required icon={DollarSign}
+                                    value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
+                                    min={1} helper="Gross salary amount in Nepali Rupees" />
+                                <FormField label="Salary Month" name="month_year" type="month" icon={Calendar}
+                                    value={form.month_year} onChange={e => setForm({ ...form, month_year: e.target.value })}
+                                    helper="Which month is this payment for?" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Amount (Rs.) *</label><input required type="number" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Month</label><input type="month" value={form.month_year} onChange={e => setForm({ ...form, month_year: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Payment Date" name="payment_date" type="date" icon={Calendar}
+                                    value={form.payment_date} onChange={e => setForm({ ...form, payment_date: e.target.value })}
+                                    helper="Date when payment was made" />
+                                <FormField label="Payment Method" name="payment_method" type="select" icon={CreditCard}
+                                    value={form.payment_method} onChange={e => setForm({ ...form, payment_method: e.target.value })}
+                                    helper="How was the payment made?"
+                                    options={methods.map(m => ({ value: m, label: m }))} />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Payment Date</label><input type="date" value={form.payment_date} onChange={e => setForm({ ...form, payment_date: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Method</label><select value={form.payment_method} onChange={e => setForm({ ...form, payment_method: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">{methods.map(m => <option key={m}>{m}</option>)}</select></div>
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 flex items-center justify-center gap-2">
+                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {saving ? 'Saving...' : 'Record Payment'}
+                                </button>
                             </div>
-                            <div className="flex gap-3 pt-2"><button type="button" onClick={() => setShowModal(false)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button><button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5">{saving ? 'Saving...' : 'Record Payment'}</button></div>
                         </form>
                     </div>
                 </div>

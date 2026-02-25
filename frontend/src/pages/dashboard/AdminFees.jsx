@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     CreditCard, Plus, Search, X, Eye, Edit3, Trash2, DollarSign,
-    Clock, CheckCircle, AlertCircle, Users, Filter, Download
+    Clock, CheckCircle, AlertCircle, Users, Filter, Download, Calendar, FileText, Loader2
 } from 'lucide-react';
 import {
     getAllFees, createFee, createBulkFees, updateFee, deleteFee,
     getClasses, getStudentsByClass
 } from '../../api';
+import FormField from '../../components/FormField';
 
 const AdminFees = () => {
     const [fees, setFees] = useState([]);
@@ -296,22 +297,23 @@ const AdminFees = () => {
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
                     <div className="bg-white rounded-2xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-                            <h3 className="text-lg font-bold text-gray-900">
-                                {bulkMode ? 'Bulk Assign Fees' : editingFee ? 'Edit Fee' : 'Add Fee'}
-                            </h3>
+                            <div>
+                                <h3 className="text-lg font-bold text-gray-900">
+                                    {bulkMode ? 'Bulk Assign Fees' : editingFee ? 'Edit Fee' : 'Add Fee'}
+                                </h3>
+                                <p className="text-sm text-gray-500 mt-0.5">
+                                    {bulkMode ? 'Assign the same fee to multiple students at once' : editingFee ? 'Update fee amount, status, or due date' : 'Create a new fee entry for a student'}
+                                </p>
+                            </div>
                             <button onClick={() => { setShowModal(false); resetForm(); }} className="text-gray-400 hover:text-gray-600"><X className="w-5 h-5" /></button>
                         </div>
                         <form className="p-6 space-y-4" onSubmit={handleSubmit}>
                             {bulkMode ? (
                                 <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Select Class *</label>
-                                        <select required value={bulkClass} onChange={e => loadBulkStudents(e.target.value)}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                            <option value="">Choose class</option>
-                                            {classes.map(cls => <option key={cls.id} value={cls.id}>{cls.name} {cls.section || ''}</option>)}
-                                        </select>
-                                    </div>
+                                    <FormField label="Select Class" name="bulk_class" type="select" required icon={Users}
+                                        value={bulkClass} onChange={e => loadBulkStudents(e.target.value)}
+                                        helper="Choose class to assign fees to"
+                                        options={[{ value: '', label: 'Choose class' }, ...classes.map(cls => ({ value: cls.id, label: `${cls.name} ${cls.section || ''}` }))]} />
                                     {bulkStudents.length > 0 && (
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 mb-1">Students ({bulkStudents.filter(s => s.selected).length} selected)</label>
@@ -336,69 +338,53 @@ const AdminFees = () => {
                                 </>
                             ) : !editingFee && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Class *</label>
-                                        <select required value={selectedClassForStudent} onChange={e => loadStudentsForClass(e.target.value)}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                            <option value="">Choose class</option>
-                                            {classes.map(cls => <option key={cls.id} value={cls.id}>{cls.name} {cls.section || ''}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Student *</label>
-                                        <select required value={form.student_id} onChange={e => setForm({ ...form, student_id: e.target.value })}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                            <option value="">Choose student</option>
-                                            {allStudentsList.map(s => <option key={s.id} value={s.id}>{s.name} (Roll #{s.roll_number})</option>)}
-                                        </select>
-                                    </div>
+                                    <FormField label="Class" name="class_filter" type="select" required icon={Users}
+                                        value={selectedClassForStudent} onChange={e => loadStudentsForClass(e.target.value)}
+                                        helper="Select class to filter students"
+                                        options={[{ value: '', label: 'Choose class' }, ...classes.map(cls => ({ value: cls.id, label: `${cls.name} ${cls.section || ''}` }))]} />
+                                    <FormField label="Student" name="student_id" type="select" required
+                                        value={form.student_id} onChange={e => setForm({ ...form, student_id: e.target.value })}
+                                        helper="Student to assign fee to"
+                                        options={[{ value: '', label: 'Choose student' }, ...allStudentsList.map(s => ({ value: s.id, label: `${s.name} (Roll #${s.roll_number})` }))]} />
                                 </div>
                             )}
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Amount (रू) *</label>
-                                    <input type="number" required min="0" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
-                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" placeholder="5000" />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Due Date *</label>
-                                    <input type="date" required value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })}
-                                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                                </div>
+                                <FormField label="Amount (रू)" name="amount" type="number" required icon={DollarSign}
+                                    value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })}
+                                    min={0} placeholder="5000"
+                                    helper="Fee amount in Nepali Rupees" />
+                                <FormField label="Due Date" name="due_date" type="date" required icon={Calendar}
+                                    value={form.due_date} onChange={e => setForm({ ...form, due_date: e.target.value })}
+                                    helper="Deadline for payment" />
                             </div>
 
                             {editingFee && (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Amount Paid</label>
-                                        <input type="number" min="0" value={form.amount_paid} onChange={e => setForm({ ...form, amount_paid: e.target.value })}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                        <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
-                                            className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary">
-                                            <option value="Unpaid">Unpaid</option>
-                                            <option value="PARTIAL">Partial</option>
-                                            <option value="PAID">Paid</option>
-                                        </select>
-                                    </div>
+                                    <FormField label="Amount Paid" name="amount_paid" type="number" icon={DollarSign}
+                                        value={form.amount_paid} onChange={e => setForm({ ...form, amount_paid: e.target.value })}
+                                        min={0} helper="How much has been paid so far?" />
+                                    <FormField label="Status" name="status" type="select"
+                                        value={form.status} onChange={e => setForm({ ...form, status: e.target.value })}
+                                        helper="Current payment status"
+                                        options={[
+                                            { value: 'Unpaid', label: '❌ Unpaid' },
+                                            { value: 'PARTIAL', label: '⚠️ Partial' },
+                                            { value: 'PAID', label: '✅ Paid' },
+                                        ]} />
                                 </div>
                             )}
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                                <input type="text" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
-                                    className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                                    placeholder="e.g. Monthly Tuition Fee - Baisakh 2082" />
-                            </div>
+                            <FormField label="Description" name="description" icon={FileText}
+                                value={form.description} onChange={e => setForm({ ...form, description: e.target.value })}
+                                placeholder="e.g. Monthly Tuition Fee - Baisakh 2082"
+                                helper="Brief description of what this fee is for" />
 
                             <div className="flex gap-3 pt-2">
                                 <button type="button" onClick={() => { setShowModal(false); resetForm(); }}
                                     className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
                                 <button type="submit"
-                                    className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90">
+                                    className="flex-1 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 flex items-center justify-center gap-2">
                                     {bulkMode ? `Assign to ${bulkStudents.filter(s => s.selected).length} Students` : editingFee ? 'Save Changes' : 'Create Fee'}
                                 </button>
                             </div>

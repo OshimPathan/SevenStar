@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Bus, Plus, X, Loader2, Trash2, MapPin, Users, AlertCircle } from 'lucide-react';
+import { Bus, Plus, X, Loader2, Trash2, MapPin, Users, AlertCircle, CheckCircle, Hash, Phone, DollarSign, User } from 'lucide-react';
 import { getTransportRoutes, addTransportRoute, updateTransportRoute, deleteTransportRoute, getTransportVehicles, addTransportVehicle, deleteTransportVehicle, getStudentTransport, removeStudentTransport } from '../../api';
+import FormField from '../../components/FormField';
 
 const AdminTransport = () => {
     const [routes, setRoutes] = useState([]);
@@ -97,15 +98,38 @@ const AdminTransport = () => {
             {showModal === 'route' && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-                        <div className="p-6 border-b border-gray-100 flex justify-between"><h3 className="text-lg font-bold">Add Route</h3><button onClick={() => setShowModal(null)}><X className="w-5 h-5 text-gray-400" /></button></div>
-                        <form onSubmit={handleSaveRoute} className="p-6 space-y-4">
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Route Name *</label><input required value={form.route_name || ''} onChange={e => setForm({ ...form, route_name: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Start Point *</label><input required value={form.start_point || ''} onChange={e => setForm({ ...form, start_point: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">End Point *</label><input required value={form.end_point || ''} onChange={e => setForm({ ...form, end_point: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-bold">Add Transport Route</h3>
+                                <p className="text-sm text-gray-500 mt-0.5">Define a new bus route with pickup points</p>
                             </div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Fee / Month (Rs.)</label><input type="number" value={form.fee_per_month || ''} onChange={e => setForm({ ...form, fee_per_month: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                            <div className="flex gap-3 pt-2"><button type="button" onClick={() => setShowModal(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button><button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5">{saving ? 'Saving...' : 'Add Route'}</button></div>
+                            <button onClick={() => setShowModal(null)}><X className="w-5 h-5 text-gray-400" /></button>
+                        </div>
+                        <form onSubmit={handleSaveRoute} className="p-6 space-y-4">
+                            <FormField label="Route Name" name="route_name" required icon={MapPin}
+                                value={form.route_name || ''} onChange={e => setForm({ ...form, route_name: e.target.value })}
+                                placeholder="e.g. Kathmandu - Bhaktapur Route"
+                                helper="A descriptive name for this bus route" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Start Point" name="start_point" required icon={MapPin}
+                                    value={form.start_point || ''} onChange={e => setForm({ ...form, start_point: e.target.value })}
+                                    placeholder="e.g. Ratnapark"
+                                    helper="Where the bus starts" />
+                                <FormField label="End Point" name="end_point" required icon={MapPin}
+                                    value={form.end_point || ''} onChange={e => setForm({ ...form, end_point: e.target.value })}
+                                    placeholder="e.g. School Campus"
+                                    helper="Final destination" />
+                            </div>
+                            <FormField label="Monthly Fee (Rs.)" name="fee_per_month" type="number" icon={DollarSign}
+                                value={form.fee_per_month || ''} onChange={e => setForm({ ...form, fee_per_month: e.target.value })}
+                                min={0} helper="Transport fee charged per month" />
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setShowModal(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 flex items-center justify-center gap-2">
+                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {saving ? 'Saving...' : 'Add Route'}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
@@ -114,20 +138,44 @@ const AdminTransport = () => {
             {showModal === 'vehicle' && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-                        <div className="p-6 border-b border-gray-100 flex justify-between"><h3 className="text-lg font-bold">Add Vehicle</h3><button onClick={() => setShowModal(null)}><X className="w-5 h-5 text-gray-400" /></button></div>
+                        <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h3 className="text-lg font-bold">Add Vehicle</h3>
+                                <p className="text-sm text-gray-500 mt-0.5">Register a new school transport vehicle</p>
+                            </div>
+                            <button onClick={() => setShowModal(null)}><X className="w-5 h-5 text-gray-400" /></button>
+                        </div>
                         <form onSubmit={handleSaveVehicle} className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Number *</label><input required value={form.vehicle_number || ''} onChange={e => setForm({ ...form, vehicle_number: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label><input type="number" value={form.capacity || ''} onChange={e => setForm({ ...form, capacity: parseInt(e.target.value) || 40 })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Vehicle Number" name="vehicle_number" required icon={Bus}
+                                    value={form.vehicle_number || ''} onChange={e => setForm({ ...form, vehicle_number: e.target.value })}
+                                    placeholder="e.g. BA 1 KA 1234"
+                                    helper="Registration plate number" />
+                                <FormField label="Seating Capacity" name="capacity" type="number" icon={Users}
+                                    value={form.capacity || ''} onChange={e => setForm({ ...form, capacity: parseInt(e.target.value) || 40 })}
+                                    min={1} helper="Max number of passengers" />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Driver Name</label><input value={form.driver_name || ''} onChange={e => setForm({ ...form, driver_name: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
-                                <div><label className="block text-sm font-medium text-gray-700 mb-1">Driver Phone</label><input value={form.driver_phone || ''} onChange={e => setForm({ ...form, driver_phone: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary" /></div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Driver Name" name="driver_name" icon={User}
+                                    value={form.driver_name || ''} onChange={e => setForm({ ...form, driver_name: e.target.value })}
+                                    placeholder="Driver's full name"
+                                    helper="Assigned driver" />
+                                <FormField label="Driver Phone" name="driver_phone" type="tel" icon={Phone}
+                                    value={form.driver_phone || ''} onChange={e => setForm({ ...form, driver_phone: e.target.value })}
+                                    placeholder="98XXXXXXXX"
+                                    helper="Emergency contact for driver" />
                             </div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">Assign to Route</label>
-                                <select value={form.route_id || ''} onChange={e => setForm({ ...form, route_id: e.target.value })} className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"><option value="">None</option>{routes.map(r => <option key={r.id} value={r.id}>{r.route_name}</option>)}</select>
+                            <FormField label="Assign to Route" name="route_id" type="select"
+                                value={form.route_id || ''} onChange={e => setForm({ ...form, route_id: e.target.value })}
+                                helper="Which route will this vehicle serve?"
+                                options={[{ value: '', label: 'Select route (optional)' }, ...routes.map(r => ({ value: r.id, label: r.route_name }))]} />
+                            <div className="flex gap-3 pt-2">
+                                <button type="button" onClick={() => setShowModal(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5 flex items-center justify-center gap-2">
+                                    {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {saving ? 'Saving...' : 'Add Vehicle'}
+                                </button>
                             </div>
-                            <div className="flex gap-3 pt-2"><button type="button" onClick={() => setShowModal(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button><button type="submit" disabled={saving} className="flex-1 btn-primary py-2.5">{saving ? 'Saving...' : 'Add Vehicle'}</button></div>
                         </form>
                     </div>
                 </div>

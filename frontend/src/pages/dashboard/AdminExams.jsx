@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, X, Trash2, Eye, FileText, Calendar, Users, Loader2, Search, AlertCircle, CheckCircle, BookOpen, ClipboardCheck, Award, ChevronDown, Download, Clock, MapPin, Save, ToggleLeft, ToggleRight, Globe, Edit3, ShieldCheck, ShieldX, CheckCheck, XCircle, BadgeCheck } from 'lucide-react';
+import { Plus, X, Trash2, Eye, FileText, Calendar, Users, Loader2, Search, AlertCircle, CheckCircle, BookOpen, ClipboardCheck, Award, ChevronDown, Download, Clock, MapPin, Save, ToggleLeft, ToggleRight, Globe, Edit3, ShieldCheck, ShieldX, CheckCheck, XCircle, BadgeCheck, Hash } from 'lucide-react';
 import { getExams, createExam, deleteExam, publishResults, getAllClasses, getResultsForClassExam, getSubjectsByClass, getExamRoutines, saveBulkExamRoutines, toggleExamPublished, updateExam, verifyStudentMarks, unverifyStudentMarks, verifyAllMarksForExam, getVerificationSummary, createTermExamsForAllClasses } from '../../api';
 import { generateReportCard } from '../../utils/generateReportCard';
 import { useAuth } from '../../context/AuthContext';
+import FormField from '../../components/FormField';
 
 const examTypeConfig = {
     'First Terminal': { color: 'bg-blue-50 text-blue-600 border-blue-200', label: '1st Term' },
@@ -468,52 +469,37 @@ const AdminExams = () => {
                             <button onClick={() => { setShowModal(false); setEditingExam(null); }} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
                         </div>
                         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Exam Name *</label>
-                                <input required value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
-                                    placeholder="e.g., First Terminal Exam 2082"
-                                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
+                            <FormField label="Exam Name" name="name" required icon={ClipboardCheck}
+                                value={form.name} onChange={e => setForm({ ...form, name: e.target.value })}
+                                placeholder="e.g. First Terminal Exam 2082"
+                                helper="Descriptive name for the exam" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Class" name="class_id" type="select" required icon={BookOpen}
+                                    value={form.class_id} onChange={e => setForm({ ...form, class_id: e.target.value })}
+                                    helper="Which class is this exam for?"
+                                    options={[{ value: '', label: 'Select class' }, ...classes.map(c => ({ value: c.id, label: `${c.name} ${c.section || ''}` }))]} />
+                                <FormField label="Exam Type" name="exam_type" type="select" required
+                                    value={form.exam_type} onChange={e => setForm({ ...form, exam_type: e.target.value })}
+                                    helper="Category of this examination"
+                                    options={Object.keys(examTypeConfig).map(t => ({ value: t, label: t }))} />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Class *</label>
-                                    <select required value={form.class_id} onChange={e => setForm({ ...form, class_id: e.target.value })}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-                                        <option value="">Select class</option>
-                                        {classes.map(c => <option key={c.id} value={c.id}>{c.name} {c.section || ''}</option>)}
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Exam Type *</label>
-                                    <select required value={form.exam_type} onChange={e => setForm({ ...form, exam_type: e.target.value })}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
-                                        {Object.keys(examTypeConfig).map(t => <option key={t} value={t}>{t}</option>)}
-                                    </select>
-                                </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Full Marks" name="full_marks" type="number" icon={Hash}
+                                    value={form.full_marks} onChange={e => setForm({ ...form, full_marks: e.target.value })}
+                                    min={1} helper="Maximum marks achievable" />
+                                <FormField label="Pass Marks" name="pass_marks" type="number" icon={Hash}
+                                    value={form.pass_marks} onChange={e => setForm({ ...form, pass_marks: e.target.value })}
+                                    min={1} helper="Minimum marks to pass"
+                                    error={form.pass_marks && form.full_marks && parseInt(form.pass_marks) > parseInt(form.full_marks) ? 'Must be ≤ full marks' : ''} />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Full Marks</label>
-                                    <input type="number" value={form.full_marks} onChange={e => setForm({ ...form, full_marks: e.target.value })}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Pass Marks</label>
-                                    <input type="number" value={form.pass_marks} onChange={e => setForm({ ...form, pass_marks: e.target.value })}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Start Date *</label>
-                                    <input required type="date" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">End Date</label>
-                                    <input type="date" value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })}
-                                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none" />
-                                </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <FormField label="Start Date" name="start_date" type="date" required icon={Calendar}
+                                    value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })}
+                                    helper="First day of the exam" />
+                                <FormField label="End Date" name="end_date" type="date" icon={Calendar}
+                                    value={form.end_date} onChange={e => setForm({ ...form, end_date: e.target.value })}
+                                    helper="Last day (leave blank for single-day)"
+                                    min={form.start_date || undefined} />
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
                                 <button type="button" onClick={() => { setShowModal(false); setEditingExam(null); }}

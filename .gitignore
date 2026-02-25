@@ -1,0 +1,36 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build artifacts
+dist/
+build/
+.next/
+.nuxt/
+.out/
+.vercel/
+.netlify/
+coverage/
+
+# Environment files
+.env
+.env.*
+backend/.env
+frontend/.env
+frontend/.env.local
+
+# Logs
+*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Misc
+*.swp
+*.swo
+

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, Navigate } from 'react-router-dom';
-import { AlertCircle, Eye, EyeOff, Loader2, ArrowLeft, GraduationCap, Users, UserCheck, Shield, LogIn } from 'lucide-react';
+import { AlertCircle, Eye, EyeOff, Loader2, ArrowLeft, GraduationCap, Users, UserCheck, Shield, LogIn, UserPlus, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getNotices } from '../api';
+import { getNotices, register } from '../api';
 
 const ROLES = [
     {
@@ -62,13 +62,25 @@ const ROLES = [
 const Login = () => {
     const navigate = useNavigate();
     const { login, user } = useAuth();
+
+    // UI State
     const [selectedRole, setSelectedRole] = useState(null);
+    const [isLoginMode, setIsLoginMode] = useState(true);
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Form State
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [confirmPassword, setConfirmPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
+
+    // Transaction State
+    const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    // Data State
     const [spotlightItems, setSpotlightItems] = useState([]);
 
     useEffect(() => {
@@ -76,42 +88,88 @@ const Login = () => {
             const notices = (res.notices || []).slice(0, 4).map(n => n.title);
             setSpotlightItems(notices.length > 0 ? notices : [
                 'Welcome to Seven Star English Boarding School',
-                'Login to access your dashboard',
+                'Register now for the digital ERP platform.',
             ]);
         }).catch(() => {
             setSpotlightItems(['Welcome to Seven Star English Boarding School']);
         });
     }, []);
 
-    if (user) return <Navigate to="/dashboard" replace />;
+    // Automatic Routing based on user status
+    if (user) {
+        if (user.status === 'PENDING') {
+            return <Navigate to="/pending-approval" replace />;
+        }
+        return <Navigate to="/dashboard" replace />;
+    }
 
     const role = ROLES.find(r => r.id === selectedRole);
 
     const handleSelectRole = (r) => {
         setSelectedRole(r.id);
-        setEmail('');
-        setPassword('');
-        setError('');
+        setIsLoginMode(true);
+        resetForm();
     };
 
     const handleBack = () => {
         setSelectedRole(null);
-        setEmail('');
-        setPassword('');
-        setError('');
+        resetForm();
     };
 
-    const handleLogin = async (e) => {
+    const toggleMode = () => {
+        setIsLoginMode(!isLoginMode);
+        resetForm();
+    };
+
+    const resetForm = () => {
+        setName('');
+        setEmail('');
+        setPassword('');
+        setConfirmPassword('');
+        setError('');
+        setSuccessMessage('');
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        setSuccessMessage('');
         setIsLoading(true);
 
-        const result = await login(email, password);
-
-        if (result.success) {
-            navigate('/dashboard');
+        if (isLoginMode) {
+            // LOGIN FLOW
+            const result = await login(email, password);
+            if (result.success) {
+                if (result.user.status === 'PENDING') {
+                    navigate('/pending-approval');
+                } else {
+                    navigate('/dashboard');
+                }
+            } else {
+                setError(result.error || 'Invalid email or password');
+            }
         } else {
-            setError(result.error || 'Invalid email or password');
+            // SIGNUP FLOW
+            if (password !== confirmPassword) {
+                setError('Passwords do not match');
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                const res = await register(name, email, password, role.id);
+                setSuccessMessage(res.message || 'Account created successfully!');
+
+                // Immediately switch them to login mode to sign in with their new credentials
+                setTimeout(() => {
+                    setIsLoginMode(true);
+                    setSuccessMessage('Registration successful! Please sign in.');
+                    setPassword('');
+                    setConfirmPassword('');
+                }, 2000);
+            } catch (err) {
+                setError(err.message || 'Registration failed. Please try again.');
+            }
         }
         setIsLoading(false);
     };
@@ -141,7 +199,7 @@ const Login = () => {
                     <div className="w-full max-w-3xl animate-fade-in-up">
                         <div className="text-center mb-10">
                             <h1 className="text-3xl sm:text-4xl font-bold text-primary mb-3">School Management Portal</h1>
-                            <p className="text-gray-500 max-w-lg mx-auto">A digital initiative by Seven Star English Boarding School to access and manage Academics, Administration, and Student services at one common platform.</p>
+                            <p className="text-gray-500 max-w-lg mx-auto">Select your role to Sign In or Create a new Account.</p>
                         </div>
 
                         {/* Role Cards Grid */}
@@ -164,11 +222,10 @@ const Login = () => {
                             })}
                         </div>
 
-                        {/* Spotlight / Info */}
+                        {/* Spotlight */}
                         <div className="mt-10 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 bg-gray-50/50">
-                                <span className="text-sm font-bold text-primary">Spotlight</span>
-                                <Link to="/#notices" className="text-xs text-primary font-medium hover:underline">More ...</Link>
+                                <span className="text-sm font-bold text-primary">Live Spotlight</span>
                             </div>
                             <div className="divide-y divide-gray-100 px-5">
                                 {spotlightItems.map((item, i) => (
@@ -181,7 +238,7 @@ const Login = () => {
                         </div>
                     </div>
                 ) : (
-                    /* ==================== STEP 2: Login Form ==================== */
+                    /* ==================== STEP 2: Auth Form ==================== */
                     <div className="w-full max-w-md animate-fade-in-up">
                         {/* Back Button */}
                         <button
@@ -194,48 +251,93 @@ const Login = () => {
 
                         <div className={`bg-white rounded-3xl shadow-xl border-2 ${role.color} overflow-hidden`}>
                             {/* Role Header */}
-                            <div className={`${role.bg} px-8 py-6 flex items-center gap-4 border-b ${role.color}`}>
-                                <div className="text-5xl">{role.emoji}</div>
-                                <div>
-                                    <h2 className={`text-2xl font-bold ${role.text}`}>{role.label} Login</h2>
-                                    <p className="text-sm text-gray-500 mt-0.5">Sign in to access your {role.label.toLowerCase()} dashboard</p>
+                            <div className={`${role.bg} px-8 py-6 flex flex-col gap-4 border-b ${role.color}`}>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-5xl">{role.emoji}</div>
+                                    <div>
+                                        <h2 className={`text-2xl font-bold ${role.text}`}>
+                                            {isLoginMode ? `${role.label} Login` : `Join as ${role.label}`}
+                                        </h2>
+                                        <p className="text-sm text-gray-500 mt-0.5">
+                                            {isLoginMode ? 'Welcome back to your dashboard' : 'Create an account to track academics'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* Toggle Switch */}
+                                <div className="flex p-1 bg-white/60 rounded-xl border border-black/5">
+                                    <button
+                                        onClick={() => { if (!isLoginMode) toggleMode(); }}
+                                        className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-all ${isLoginMode ? 'bg-white shadow border border-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Sign In
+                                    </button>
+                                    <button
+                                        onClick={() => { if (isLoginMode) toggleMode(); }}
+                                        className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-all ${!isLoginMode ? 'bg-white shadow border border-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+                                    >
+                                        Create Account
+                                    </button>
                                 </div>
                             </div>
 
-                            {/* Login Form */}
+                            {/* Form */}
                             <div className="p-8">
-                                <form className="space-y-5" onSubmit={handleLogin}>
+                                <form className="space-y-4" onSubmit={handleSubmit}>
+
+                                    {/* Alerts */}
                                     {error && (
-                                        <div className="bg-red-50 text-red-600 p-3.5 rounded-xl text-sm flex items-start gap-2 border border-red-100">
+                                        <div className="bg-red-50 text-red-600 p-3.5 rounded-xl text-sm flex items-start gap-2 border border-red-100 animate-fade-in-up">
                                             <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
                                             <p>{error}</p>
                                         </div>
                                     )}
+                                    {successMessage && (
+                                        <div className="bg-green-50 text-green-700 p-3.5 rounded-xl text-sm flex items-start gap-2 border border-green-200 animate-fade-in-up">
+                                            <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5 text-green-600" />
+                                            <p className="font-medium">{successMessage}</p>
+                                        </div>
+                                    )}
 
+                                    {/* Signup Fields */}
+                                    {!isLoginMode && (
+                                        <div className="animate-fade-in-up">
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                                            <input
+                                                type="text"
+                                                required
+                                                value={name}
+                                                onChange={(e) => setName(e.target.value)}
+                                                className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50 focus:bg-white"
+                                                placeholder={`e.g. ${role.id === 'STUDENT' ? 'Aarav Sharma' : 'Hari Sharma'}`}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Common Fields */}
                                     <div>
-                                        <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Email Address</label>
                                         <input
-                                            id="email"
                                             type="email"
                                             required
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
-                                            className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50 focus:bg-white transition-all"
-                                            placeholder="your.email@sevenstar.edu.np"
+                                            className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50 focus:bg-white"
+                                            placeholder="your.email@example.com"
                                         />
                                     </div>
 
                                     <div>
-                                        <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                                        <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
                                         <div className="relative">
                                             <input
-                                                id="password"
                                                 type={showPassword ? 'text' : 'password'}
                                                 required
                                                 value={password}
                                                 onChange={(e) => setPassword(e.target.value)}
-                                                className="appearance-none block w-full px-4 py-3 pr-12 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50 focus:bg-white transition-all"
-                                                placeholder="Enter your password"
+                                                className="block w-full px-4 py-2.5 pr-12 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50 focus:bg-white"
+                                                placeholder={isLoginMode ? "Enter password" : "Min 8 characters"}
+                                                minLength={isLoginMode ? 1 : 8}
                                             />
                                             <button
                                                 type="button"
@@ -247,51 +349,68 @@ const Login = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center justify-between">
-                                        <label className="flex items-center">
-                                            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" />
-                                            <span className="ml-2 text-sm text-gray-600">Remember me</span>
-                                        </label>
-                                    </div>
+                                    {/* Signup Field: Confirm Password */}
+                                    {!isLoginMode && (
+                                        <div className="animate-fade-in-up">
+                                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Confirm Password</label>
+                                            <input
+                                                type="password"
+                                                required
+                                                value={confirmPassword}
+                                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                                className="block w-full px-4 py-2.5 border border-gray-200 rounded-xl shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50 focus:bg-white"
+                                                placeholder="Repeat password"
+                                                minLength={8}
+                                            />
+                                        </div>
+                                    )}
 
+                                    {/* Remember Me */}
+                                    {isLoginMode && (
+                                        <div className="flex items-center justify-between pt-1">
+                                            <label className="flex items-center">
+                                                <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" />
+                                                <span className="ml-2 text-sm text-gray-600">Remember me</span>
+                                            </label>
+                                        </div>
+                                    )}
+
+                                    {/* Submit Button */}
                                     <button
                                         type="submit"
                                         disabled={isLoading}
-                                        className={`w-full ${role.btnBg} text-white py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-60`}
+                                        className={`w-full mt-2 ${role.btnBg} text-white py-3.5 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg disabled:opacity-60 disabled:cursor-not-allowed`}
                                     >
                                         {isLoading ? (
                                             <>
                                                 <Loader2 className="w-5 h-5 animate-spin" />
-                                                Signing in...
+                                                {isLoginMode ? 'Verifying...' : 'Creating...'}
                                             </>
                                         ) : (
                                             <>
-                                                <LogIn className="w-4 h-4" />
-                                                Sign In as {role.label}
+                                                {isLoginMode ? <LogIn className="w-4 h-4" /> : <UserPlus className="w-4 h-4" />}
+                                                {isLoginMode ? `Sign In as ${role.label}` : 'Create Account'}
                                             </>
                                         )}
                                     </button>
                                 </form>
 
-                                {/* Quick Demo */}
-                                <div className="mt-6 pt-5 border-t border-gray-100">
-                                    <button
-                                        onClick={() => { setEmail(role.demoEmail); setPassword(role.demoPass); }}
-                                        className={`w-full py-2.5 rounded-xl text-xs font-semibold ${role.bg} ${role.text} ${role.hoverBg} transition-colors border border-transparent hover:border-current`}
-                                    >
-                                        ⚡ Use Demo {role.label} Credentials
-                                    </button>
-                                </div>
+                                {/* Demo Credentials Section */}
+                                {isLoginMode && (
+                                    <div className="mt-6 pt-5 border-t border-gray-100">
+                                        <button
+                                            onClick={() => { setEmail(role.demoEmail); setPassword(role.demoPass); }}
+                                            className={`w-full py-2.5 rounded-xl text-xs font-semibold ${role.bg} ${role.text} ${role.hoverBg} transition-colors border border-transparent hover:border-current`}
+                                        >
+                                            ⚡ Use Demo {role.label} Credentials
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
                 )}
             </main>
-
-            {/* Footer */}
-            <footer className="bg-gray-800 text-center py-4">
-                <p className="text-xs text-gray-400">Copyright © {new Date().getFullYear()} Seven Star English Boarding School, Nepalgunj.</p>
-            </footer>
         </div>
     );
 };

@@ -629,6 +629,18 @@ export async function getDefaultStream() {
     return data;
 }
 
+export async function register(name, email, password, role) {
+    const { data, error } = await insforge.functions.invoke('auth-signup', {
+        body: { name, email, password, role }
+    });
+
+    if (error || !data || data.error) {
+        throw new Error(data?.error || 'Registration failed');
+    }
+
+    return data;
+}
+
 export async function login(email, password) {
     // P0 FIX: Call the secure Edge Function to verify credentials and mint a real JWT
     const { data, error } = await insforge.functions.invoke('auth-login', {

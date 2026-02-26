@@ -55,6 +55,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     const { user, loading } = useAuth();
     if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div></div>;
     if (!user) return <Navigate to="/login" replace />;
+    if (user.status === 'PENDING') return <Navigate to="/pending-approval" replace />;
     if (allowedRoles && !allowedRoles.includes(user.role)) return <Navigate to="/dashboard" replace />;
     return children;
 };
@@ -68,6 +69,7 @@ function App() {
             <Route path="/admission" element={<AdmissionForm />} />
             <Route path="/exam-schedule" element={<ExamSchedule />} />
             <Route path="/results" element={<ResultChecker />} />
+            <Route path="/pending-approval" element={<Suspense fallback={<PageLoader />}><PendingApproval /></Suspense>} />
 
             {/* Protected Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>

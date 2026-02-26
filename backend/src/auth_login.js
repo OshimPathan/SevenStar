@@ -25,7 +25,7 @@ module.exports = async function (request) {
         // Fetch user + hash
         const { data: user, error } = await supabase
             .from('users')
-            .select('id, email, name, role, password_hash')
+            .select('id, email, name, role, password_hash, status')
             .eq('email', email)
             .eq('is_deleted', false)
             .maybeSingle();

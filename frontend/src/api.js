@@ -551,20 +551,41 @@ export async function submitAdmissionApplication(form) {
 }
 // Exams
 export async function getPublishedExamSchedule() {
+    // P3 FIX: Optimized N+1 query string. Fetches exams, their classes, and routines in a single query.
     const { data: exams, error } = await insforge.database
         .from('exams')
-        .select('*')
+        .select(`
+            *,
+            exam_classes (
+                class_id,
+                classes (name),
+                exam_routines (
+                    id, exam_date, start_time, end_time, room_number,
+                    subjects (name)
+                )
+            )
+        `)
         .eq('published', true)
         .order('start_date', { ascending: true });
     if (error) throw new Error(error.message);
 
     const result = [];
     for (const ex of exams || []) {
-        // get linked class via exam_classes (assume 1:many but display first for public page)
-        const { data: ec } = await insforge.database.from('exam_classes').select('class_id, classes(name)').eq('exam_id', ex.id);
-        const className = ec?.[0]?.classes?.name || '';
-        const routines = await getExamRoutines(ex.id);
-        result.push({ ...ex, class_name: className, routines });
+        // Assume 1:many but display first for public page
+        const ec = ex.exam_classes && ex.exam_classes.length > 0 ? ex.exam_classes[0] : null;
+        const className = ec?.classes?.name || '';
+
+        // Format routines to match frontend expectations
+        const routines = (ec?.exam_routines || []).map(r => ({
+            ...r,
+            room: r.room_number || '',
+            subject_name: r.subjects?.name || ''
+        })).sort((a, b) => new Date(a.exam_date) - new Date(b.exam_date));
+
+        const cleanedEx = { ...ex };
+        delete cleanedEx.exam_classes; // Remove nested data to keep payload clean
+
+        result.push({ ...cleanedEx, class_name: className, routines });
     }
     return result;
 }
@@ -608,30 +629,29 @@ export async function getDefaultStream() {
     return data;
 }
 
-// ========== AUTH ==========
-
 export async function login(email, password) {
-    const { data, error } = await insforge.database
-        .from('users').select('*').eq('email', email).maybeSingle();
+    // P0 FIX: Call the secure Edge Function to verify credentials and mint a real JWT
+    const { data, error } = await insforge.functions.invoke('auth-login', {
+        body: { email, password }
+    });
 
-    if (error || !data) throw new Error('Invalid email or password');
+    if (error || !data || data.error) {
+        throw new Error(data?.error || 'Invalid email or password');
+    }
 
-    const match = await bcrypt.compare(password, data.password_hash);
-    if (!match) throw new Error('Invalid email or password');
-
-    const user = { id: data.id, name: data.name, email: data.email, role: data.role };
+    const { user, token } = data;
     const academicYear = await getActiveAcademicYear();
 
-    if (data.role === 'TEACHER' || data.role === 'ADMIN') {
+    if (user.role === 'TEACHER' || user.role === 'ADMIN') {
         const { data: staff } = await insforge.database
-            .from('staff').select('*').eq('user_id', data.id).maybeSingle();
+            .from('staff').select('*').eq('user_id', user.id).maybeSingle();
         if (staff) {
             user.staff_id = staff.id;
-            user.teacher_id = staff.id; // Alias for teacher views
+            user.teacher_id = staff.id;
         }
-    } else if (data.role === 'STUDENT') {
+    } else if (user.role === 'STUDENT') {
         const { data: student } = await insforge.database
-            .from('students').select('*').eq('user_id', data.id).maybeSingle();
+            .from('students').select('*').eq('user_id', user.id).maybeSingle();
         if (student) {
             user.student_id = student.id;
             if (academicYear) {
@@ -647,9 +667,9 @@ export async function login(email, password) {
                 }
             }
         }
-    } else if (data.role === 'PARENT') {
+    } else if (user.role === 'PARENT') {
         const { data: children } = await insforge.database
-            .from('students').select('id, user_id').eq('parent_user_id', data.id);
+            .from('students').select('id, user_id').eq('parent_user_id', user.id);
         user.student_ids = (children || []).map(c => c.id);
         if (children?.length > 0) {
             user.student_id = children[0].id;
@@ -667,14 +687,18 @@ export async function login(email, password) {
         }
     }
 
-    return { token: 'insforge_' + Date.now(), user };
+    return { token, user };
 }
 
 // ========== ADMIN - STUDENTS (Via Enrollments & Students Table) ==========
 
-export async function getStudents({ search = '', classId = '', sectionId = '' } = {}) {
+export async function getStudents({ search = '', classId = '', sectionId = '', page = 1, limit = 100 } = {}) {
     const academicYear = await getActiveAcademicYear();
-    if (!academicYear) return { students: [] };
+    if (!academicYear) return { students: [], total: 0 };
+
+    // P3 FIX: Server-side pagination with count
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
     let query = insforge.database.from('enrollments')
         .select(`
@@ -686,17 +710,18 @@ export async function getStudents({ search = '', classId = '', sectionId = '' } 
             ),
             classes (name),
             sections (name)
-        `)
-        .eq('academic_year_id', academicYear.id);
+        `, { count: 'exact' })
+        .eq('academic_year_id', academicYear.id)
+        .range(from, to);
 
     if (classId) query = query.eq('class_id', classId);
     if (sectionId) query = query.eq('section_id', sectionId);
 
-    const { data: enrolls, error } = await query;
+    const { data: enrolls, error, count } = await query;
     if (error) throw new Error(error.message);
 
     let studentsList = (enrolls || []).map(e => ({
-        id: e.students.id, // ID mapped to students.id for UI compatibility
+        id: e.students.id,
         enrollment_id: e.id,
         user_id: e.students.user_id,
         name: e.students.users?.name || `${e.students.first_name || ''} ${e.students.last_name || ''}`.trim(),
@@ -709,7 +734,7 @@ export async function getStudents({ search = '', classId = '', sectionId = '' } 
         roll_number: e.roll_number,
         parent_name: e.students.father_name,
         parent_phone: e.students.father_phone,
-        ...e.students // spreads address, date_of_birth, etc.
+        ...e.students
     }));
 
     if (search) {
@@ -723,7 +748,7 @@ export async function getStudents({ search = '', classId = '', sectionId = '' } 
         );
     }
 
-    return { students: studentsList };
+    return { students: studentsList, total: count || studentsList.length, page, limit };
 }
 
 export async function getStudentPerformance(studentId) {
@@ -1385,11 +1410,56 @@ export async function getDashboardStats() {
     const { count: tCount } = await insforge.database.from('staff').select('*', { count: 'exact', head: true }).eq('staff_type', 'Teaching');
     const { data: notices } = await insforge.database.from('notices').select('*').limit(4);
     const { data: events } = await insforge.database.from('events').select('*').limit(4);
+
+    // P2 FIX: Calculate real attendance data instead of hardcoded values
+    let todayAttPercent = 0;
+    let weeklyAttendance = [];
+    let paidFees = 0;
+    let pendingFees = 0;
+    try {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const { data: todayAtt } = await insforge.database.from('attendance')
+            .select('status').eq('attendance_date', todayStr);
+        if (todayAtt && todayAtt.length > 0) {
+            const presentCount = todayAtt.filter(a => ['Present', 'Late', 'Half-Day'].includes(a.status)).length;
+            todayAttPercent = Math.round((presentCount / todayAtt.length) * 100);
+        }
+        // Last 6 days attendance
+        const days = [];
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(); d.setDate(d.getDate() - i);
+            days.push(d.toISOString().slice(0, 10));
+        }
+        const { data: weekAtt } = await insforge.database.from('attendance')
+            .select('attendance_date, status')
+            .gte('attendance_date', days[0]).lte('attendance_date', days[5]);
+        const dayMap = {};
+        days.forEach(d => { dayMap[d] = { day: new Date(d).toLocaleDateString('en', { weekday: 'short' }), present: 0, absent: 0 }; });
+        (weekAtt || []).forEach(a => {
+            if (dayMap[a.attendance_date]) {
+                if (['Present', 'Late', 'Half-Day'].includes(a.status)) dayMap[a.attendance_date].present++;
+                else dayMap[a.attendance_date].absent++;
+            }
+        });
+        weeklyAttendance = Object.values(dayMap);
+
+        // Fee stats
+        const activeYear = await getActiveAcademicYear();
+        if (activeYear) {
+            const { data: fees } = await insforge.database.from('student_fees')
+                .select('amount_due, amount_paid, status');
+            (fees || []).forEach(f => {
+                paidFees += parseFloat(f.amount_paid || 0);
+                if (f.status !== 'Paid') pendingFees += parseFloat(f.amount_due || 0) - parseFloat(f.amount_paid || 0);
+            });
+        }
+    } catch (_) { /* stats errors should not break dashboard */ }
+
     return {
         totalStudents: sCount || 0,
         totalTeachers: tCount || 0,
-        pendingFees: 0, paidFees: 0, overdueFees: 0, todayAttendancePercent: 85,
-        weeklyAttendance: [], notices: notices || [], events: events || [], recentStudents: []
+        pendingFees, paidFees, overdueFees: 0, todayAttendancePercent: todayAttPercent,
+        weeklyAttendance, notices: notices || [], events: events || [], recentStudents: []
     };
 }
 
@@ -1892,9 +1962,38 @@ export async function saveMarks(marks) {
     await saveBulkMarks(examId, subjectId, payload);
     return { success: true };
 }
-export async function publishResults(examId) {
-    const { data, error } = await insforge.database.from('exams').update({ results_published: true }).eq('id', examId).select();
+export async function publishResults(examId, publisherId) {
+    // P2 FIX: Check all marks are verified before publishing
+    const { total, unverified } = await getVerificationSummary(examId);
+    if (total === 0) throw new Error('No marks entered for this exam yet');
+    if (unverified > 0) throw new Error(`Cannot publish: ${unverified} mark entries are not verified yet`);
+
+    // Check not already published
+    const { data: exam } = await insforge.database.from('exams').select('results_published').eq('id', examId).maybeSingle();
+    if (exam?.results_published) throw new Error('Results are already published for this exam');
+
+    // Lock all exam_classes for this exam
+    await insforge.database.from('exam_classes').update({ is_locked: true }).eq('exam_id', examId);
+
+    // Publish with timestamp
+    const { data, error } = await insforge.database.from('exams').update({
+        results_published: true,
+        published_at: new Date().toISOString(),
+        published_by: publisherId || null
+    }).eq('id', examId).select();
     if (error) throw new Error(error.message);
+
+    // Write audit log
+    try {
+        await insforge.database.from('audit_logs').insert([{
+            user_id: publisherId || null,
+            action: 'PUBLISH_RESULTS',
+            table_name: 'exams',
+            record_id: examId,
+            details: { total_marks_entries: total, published_at: new Date().toISOString() }
+        }]);
+    } catch (_) { /* audit log failure should not block publish */ }
+
     return { success: true, count: data?.length || 0 };
 }
 export async function getVerificationSummary(examId) {
@@ -1906,6 +2005,28 @@ export async function getVerificationSummary(examId) {
 export async function saveBulkMarks(examId, subjectId, marks) {
     // marks: [{ student_id, marks_obtained, theory_marks, practical_marks }]
     if (!Array.isArray(marks) || marks.length === 0) return { success: true };
+
+    // P2 FIX: Check if exam is locked before allowing marks entry
+    const { data: examClasses } = await insforge.database.from('exam_classes')
+        .select('is_locked').eq('exam_id', examId);
+    const isLocked = (examClasses || []).some(ec => ec.is_locked);
+    if (isLocked) throw new Error('Marks entry is locked for this exam. Contact admin to unlock.');
+
+    // P2 FIX: Check if results are already published
+    const { data: examCheck } = await insforge.database.from('exams')
+        .select('results_published').eq('id', examId).maybeSingle();
+    if (examCheck?.results_published) throw new Error('Cannot modify marks — results are already published.');
+
+    // P2 FIX: Validate marks ranges
+    for (const m of marks) {
+        const obtained = parseFloat(m.marks_obtained || 0);
+        const total = parseFloat(m.total_marks || 100);
+        if (obtained < 0) throw new Error(`Invalid marks: ${obtained} is negative`);
+        if (obtained > total) throw new Error(`Invalid marks: ${obtained} exceeds total ${total}`);
+        if (m.theory_marks != null && parseFloat(m.theory_marks) < 0) throw new Error('Theory marks cannot be negative');
+        if (m.practical_marks != null && parseFloat(m.practical_marks) < 0) throw new Error('Practical marks cannot be negative');
+    }
+
     const studentIds = marks.map(m => m.student_id);
     const activeYear = await getActiveAcademicYear();
     const { data: enrolls } = await insforge.database.from('enrollments')
@@ -1927,7 +2048,8 @@ export async function saveBulkMarks(examId, subjectId, marks) {
             gpa: m.gpa
         }));
     if (rows.length === 0) return { success: true };
-    await insforge.database.from('exam_marks').upsert(rows, { onConflict: 'exam_id,enrollment_id,subject_id' });
+    const { error } = await insforge.database.from('exam_marks').upsert(rows, { onConflict: 'exam_id,enrollment_id,subject_id' });
+    if (error) throw new Error(error.message);
     return { success: true };
 }
 export async function verifyStudentMarks(examId, studentId, verifierId) {

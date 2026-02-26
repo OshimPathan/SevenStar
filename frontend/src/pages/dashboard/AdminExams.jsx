@@ -117,7 +117,7 @@ const AdminExams = () => {
 
     const handlePublish = async (examId) => {
         try {
-            const res = await publishResults(examId);
+            const res = await publishResults(examId, user.id);
             showToast(`Results published for ${res.count} entries. Now visible to students.`);
             await fetchData();
         } catch (err) { showToast(err.message, 'error'); }

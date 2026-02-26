@@ -4,6 +4,7 @@ import { useAuth } from './context/AuthContext';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
+const PendingApproval = React.lazy(() => import('./pages/PendingApproval'));
 import AdmissionForm from './pages/AdmissionForm';
 import ExamSchedule from './pages/ExamSchedule';
 import ResultChecker from './pages/ResultChecker';

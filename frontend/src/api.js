@@ -676,16 +676,37 @@ export async function rejectUser(targetUserId) {
 // =====================================================
 
 export async function login(email, password) {
-    // P0 FIX: Call the secure Edge Function to verify credentials and mint a real JWT
-    const { data, error } = await insforge.functions.invoke('auth-login', {
-        body: { email, password }
+    // Use Native Supabase Auth to securely log in and automatically persist session cookies
+    const { data: authData, error: authError } = await insforge.auth.signInWithPassword({
+        email,
+        password
     });
 
-    if (error || !data || data.error) {
-        throw new Error(data?.error || 'Invalid email or password');
+    if (authError || !authData.user) {
+        throw new Error(authError?.message || 'Invalid email or password');
     }
 
-    const { user, token } = data;
+    // Fetch the enriched profile including role and pending status from our public table
+    const { data: userProfile, error: profileError } = await insforge.database
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+
+    if (profileError || !userProfile) {
+        // Automatically sign out if database drift occurred
+        await insforge.auth.signOut();
+        throw new Error('Account internal mapping missing. Please contact Admin.');
+    }
+
+    if (userProfile.is_deleted) {
+        await insforge.auth.signOut();
+        throw new Error('This account has been deactivated.');
+    }
+
+    // Combine Auth UUID user with Public Profile columns
+    const user = { ...authData.user, ...userProfile };
+    const token = authData.session.access_token;
     const academicYear = await getActiveAcademicYear();
 
     if (user.role === 'TEACHER' || user.role === 'ADMIN') {

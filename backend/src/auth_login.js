@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { createClient } = require('@supabase/supabase-js');
+const { createClient: createSupabaseClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcryptjs');
 
 // This function runs on the edge to securely authenticate users
@@ -17,7 +17,7 @@ module.exports = async function (request) {
         }
 
         // Initialize Supabase client using Service Role to bypass RLS for credential checking
-        const supabase = createClient(
+        const supabase = createSupabaseClient(
             process.env.VITE_INSFORGE_URL || process.env.SUPABASE_URL,
             process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_INSFORGE_ANON_KEY
         );

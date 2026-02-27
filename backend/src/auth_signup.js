@@ -1,5 +1,4 @@
 const { createClient } = require('@supabase/supabase-js');
-const bcrypt = require('bcryptjs');
 
 module.exports = async function (request) {
     if (request.method !== 'POST') {
@@ -13,13 +12,13 @@ module.exports = async function (request) {
             return new Response(JSON.stringify({ error: 'All fields are required' }), { status: 400 });
         }
 
-        // Initialize Supabase with service role to bypass RLS for inserting new users
+        // Initialize Supabase with service role
         const supabase = createClient(
             process.env.VITE_INSFORGE_URL || process.env.SUPABASE_URL,
             process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_INSFORGE_ANON_KEY
         );
 
-        // Check if user exists
+        // Check if user exists in public table
         const { data: existingUser } = await supabase
             .from('users')
             .select('id')
@@ -30,17 +29,28 @@ module.exports = async function (request) {
             return new Response(JSON.stringify({ error: 'Email already registered' }), { status: 400 });
         }
 
-        // Hash password
-        const salt = await bcrypt.genSalt(10);
-        const passwordHash = await bcrypt.hash(password, salt);
+        // 1. Create the user securely via Supabase Auth
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email,
+            password,
+            email_confirm: true,
+            user_metadata: { name, role }
+        });
 
-        // Insert new user with PENDING state
+        if (authError) {
+            console.error('Auth creation error:', authError);
+            return new Response(JSON.stringify({ error: authError.message || 'Failed to register authentication' }), { status: 400 });
+        }
+
+        const authUser = authData.user;
+
+        // 2. Insert into public.users with the corresponding Auth ID and PENDING status
         const { data: newUser, error: insertError } = await supabase
             .from('users')
             .insert([{
+                id: authUser.id,
                 name,
                 email,
-                password_hash: passwordHash,
                 role: role.toUpperCase(),
                 status: 'PENDING'
             }])
@@ -49,7 +59,9 @@ module.exports = async function (request) {
 
         if (insertError) {
             console.error('Insert error:', insertError);
-            return new Response(JSON.stringify({ error: 'Failed to create account' }), { status: 500 });
+            // Cleanup auth user if public table insert fails
+            await supabase.auth.admin.deleteUser(authUser.id);
+            return new Response(JSON.stringify({ error: 'Failed to create internal account details' }), { status: 500 });
         }
 
         return new Response(JSON.stringify({
@@ -62,6 +74,6 @@ module.exports = async function (request) {
 
     } catch (err) {
         console.error('Server error:', err);
-        return new Response(JSON.stringify({ error: 'Server configuration error' }), { status: 500 });
+        return new Response(JSON.stringify({ error: 'Server context error' }), { status: 500 });
     }
 }

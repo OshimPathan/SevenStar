@@ -1,4 +1,4 @@
-const { createClient } = require('@supabase/supabase-js');
+const { createClient: createSupabaseClient } = require('@supabase/supabase-js');
 
 module.exports = async function (request) {
     if (request.method !== 'POST') {
@@ -13,7 +13,7 @@ module.exports = async function (request) {
         }
 
         // Initialize Supabase with service role to bypass RLS for administrative tasks
-        const supabase = createClient(
+        const supabase = createSupabaseClient(
             process.env.VITE_INSFORGE_URL || process.env.SUPABASE_URL,
             process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_INSFORGE_ANON_KEY
         );

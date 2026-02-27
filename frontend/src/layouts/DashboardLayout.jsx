@@ -204,6 +204,7 @@ const DashboardLayout = () => {
                     <>
                         <div className="sidebar-section-label">Management</div>
                         <SidebarGroup label="Students" icon={<GraduationCap className="w-[18px] h-[18px]" />}>
+                            <SidebarLink to="/dashboard/approvals" icon={<UserCheck className="w-4 h-4" />} label="Pending Approvals" onClick={closeSidebar} />
                             <SidebarLink to="/dashboard/students" icon={<GraduationCap className="w-4 h-4" />} label="All Students" onClick={closeSidebar} />
                             <SidebarLink to="/dashboard/class-browser" icon={<Users className="w-4 h-4" />} label="Class Browser" onClick={closeSidebar} />
                         </SidebarGroup>

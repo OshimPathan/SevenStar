@@ -24,6 +24,7 @@ const StudentNotices = React.lazy(() => import('./pages/dashboard/StudentNotices
 const StudentResults = React.lazy(() => import('./pages/dashboard/StudentResults'));
 const StudentFees = React.lazy(() => import('./pages/dashboard/StudentFees'));
 const AdminNotices = React.lazy(() => import('./pages/dashboard/AdminNotices'));
+const AdminApprovals = React.lazy(() => import('./pages/dashboard/AdminApprovals'));
 const AdminEvents = React.lazy(() => import('./pages/dashboard/AdminEvents'));
 const AdminGallery = React.lazy(() => import('./pages/dashboard/AdminGallery'));
 const AdminPrograms = React.lazy(() => import('./pages/dashboard/AdminPrograms'));
@@ -75,6 +76,7 @@ function App() {
             {/* Protected Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
                 <Route index element={<Suspense fallback={<PageLoader />}><AdminDashboard /></Suspense>} />
+                <Route path="approvals" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminApprovals /></Suspense></ProtectedRoute>} />
                 <Route path="students" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminStudents /></Suspense></ProtectedRoute>} />
                 <Route path="teachers" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminTeachers /></Suspense></ProtectedRoute>} />
                 <Route path="classes" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminClasses /></Suspense></ProtectedRoute>} />

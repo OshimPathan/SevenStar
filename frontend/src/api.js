@@ -641,6 +641,40 @@ export async function register(name, email, password, role) {
     return data;
 }
 
+// ============== ADMIN USER APPROVAL API ==============
+
+export async function getPendingUsers() {
+    return handleResponse(
+        supabase
+            .from('users')
+            .select('*')
+            .eq('status', 'PENDING')
+            .order('created_at', { ascending: false })
+    );
+}
+
+export async function approveUser(targetUserId, role, mappingData) {
+    const { data, error } = await insforge.functions.invoke('auth-approve', {
+        body: { target_user_id: targetUserId, role, mapping_data }
+    });
+
+    if (error || !data || data.error) {
+        throw new Error(data?.error || 'Failed to approve user');
+    }
+
+    return data;
+}
+
+export async function rejectUser(targetUserId) {
+    // Only admins can execute this, so we rely on RLS/Backend deletion rules.
+    // For now, we will just delete the user record entirely (since they were never active).
+    return handleResponse(
+        supabase.from('users').delete().eq('id', targetUserId)
+    );
+}
+
+// =====================================================
+
 export async function login(email, password) {
     // P0 FIX: Call the secure Edge Function to verify credentials and mint a real JWT
     const { data, error } = await insforge.functions.invoke('auth-login', {

@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "build": "CI=false vite build",
+        "build": "CI=false vite build && echo 'CACHE_BUST_VERCEL_1'",
         "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
         "preview": "vite preview"
     },

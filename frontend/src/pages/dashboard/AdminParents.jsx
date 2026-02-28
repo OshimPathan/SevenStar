@@ -313,8 +313,8 @@ const AdminParents = () => {
                                 </div>
                                 <FormField label="Password" name="password"
                                     value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                                    placeholder="Default: parent123"
-                                    helper="Leave blank to use default password" />
+                                    placeholder={editingParent ? "Leave blank to keep current" : "Default: parent123"}
+                                    helper={editingParent ? "Enter new password to reset" : "Leave blank to use default password"} />
 
                                 {/* Link to Students */}
                                 <div>

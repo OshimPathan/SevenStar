@@ -208,6 +208,7 @@ const DashboardLayout = () => {
                             <SidebarLink to="/dashboard/students" icon={<GraduationCap className="w-4 h-4" />} label="All Students" onClick={closeSidebar} />
                             <SidebarLink to="/dashboard/class-browser" icon={<Users className="w-4 h-4" />} label="Class Browser" onClick={closeSidebar} />
                         </SidebarGroup>
+                        <SidebarLink to="/dashboard/users" icon={<Users className="w-[18px] h-[18px]" />} label="Users" onClick={closeSidebar} />
                         <SidebarLink to="/dashboard/teachers" icon={<Users className="w-[18px] h-[18px]" />} label="Teachers" onClick={closeSidebar} />
                         <SidebarLink to="/dashboard/parents" icon={<UserCheck className="w-[18px] h-[18px]" />} label="Parents" onClick={closeSidebar} />
                         <SidebarLink to="/dashboard/classes" icon={<BookOpen className="w-[18px] h-[18px]" />} label="Classes & Subjects" onClick={closeSidebar} />

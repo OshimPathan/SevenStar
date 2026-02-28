@@ -679,12 +679,10 @@ const AdminStudents = () => {
                                                 value={form.email} onChange={e => setForm({ ...form, email: e.target.value })}
                                                 placeholder="student@sevenstar.edu.np"
                                                 helper="This will be used for login credentials" />
-                                            {!editingStudent && (
-                                                <FormField label="Password" name="password"
-                                                    value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                                                    placeholder="Default: student123"
-                                                    helper="Leave blank to use default password" />
-                                            )}
+                                            <FormField label="Password" name="password"
+                                                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                                                placeholder={editingStudent ? "Leave blank to keep current" : "Default: student123"}
+                                                helper={editingStudent ? "Enter new password to reset" : "Leave blank to use default password"} />
                                             <FormField label="Class" name="class_id" type="select" required
                                                 value={form.class_id} onChange={e => setForm({ ...form, class_id: e.target.value })}
                                                 helper="Assign the student to a class"

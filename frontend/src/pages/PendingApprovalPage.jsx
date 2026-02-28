@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Clock, LogOut, ShieldAlert } from 'lucide-react';
 
-const PendingApproval = () => {
+const PendingApprovalPage = () => {
     const { logout, user } = useAuth();
     const navigate = useNavigate();
 
@@ -58,4 +58,4 @@ const PendingApproval = () => {
     );
 };
 
-export default PendingApproval;
+export default PendingApprovalPage;

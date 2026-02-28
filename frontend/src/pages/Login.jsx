@@ -372,6 +372,9 @@ const Login = () => {
                                                 <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded" />
                                                 <span className="ml-2 text-sm text-gray-600">Remember me</span>
                                             </label>
+                                            <Link to="/forgot-password" className="text-sm font-semibold text-primary hover:text-primary/80">
+                                                Forgot password?
+                                            </Link>
                                         </div>
                                     )}
 

@@ -555,12 +555,10 @@ const AdminTeachers = () => {
                                     </div>
                                 </div>
 
-                                {!editingTeacher && (
-                                    <FormField label="Password" name="password"
-                                        value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                                        placeholder="Default: teacher123"
-                                        helper="Leave blank to use default password" />
-                                )}
+                                <FormField label="Password" name="password"
+                                    value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                                    placeholder={editingTeacher ? "Leave blank to keep current" : "Default: teacher123"}
+                                    helper={editingTeacher ? "Enter new password to reset" : "Leave blank to use default password"} />
 
                                 {/* Contact & Qualifications */}
                                 <div className="border-t border-gray-100 pt-4">

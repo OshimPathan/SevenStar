@@ -4,11 +4,14 @@ import { useAuth } from './context/AuthContext';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
-const PendingApproval = React.lazy(() => import('./pages/PendingApproval'));
 import AdmissionForm from './pages/AdmissionForm';
 import ExamSchedule from './pages/ExamSchedule';
 import ResultChecker from './pages/ResultChecker';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import DashboardLayout from './layouts/DashboardLayout';
+
+const PendingApprovalPage = React.lazy(() => import('./pages/PendingApprovalPage'));
 
 // Lazy-loaded dashboard pages (code-split into separate chunks)
 const AdminDashboard = React.lazy(() => import('./pages/dashboard/AdminDashboard'));
@@ -30,6 +33,7 @@ const AdminGallery = React.lazy(() => import('./pages/dashboard/AdminGallery'));
 const AdminPrograms = React.lazy(() => import('./pages/dashboard/AdminPrograms'));
 const AdminExams = React.lazy(() => import('./pages/dashboard/AdminExams'));
 const AdminReviews = React.lazy(() => import('./pages/dashboard/AdminReviews'));
+const AdminUsers = React.lazy(() => import('./pages/dashboard/AdminUsers'));
 const AdminAdmissions = React.lazy(() => import('./pages/dashboard/AdminAdmissions'));
 const AdminFees = React.lazy(() => import('./pages/dashboard/AdminFees'));
 const AdminSettings = React.lazy(() => import('./pages/dashboard/AdminSettings'));
@@ -68,10 +72,12 @@ function App() {
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/admission" element={<AdmissionForm />} />
             <Route path="/exam-schedule" element={<ExamSchedule />} />
             <Route path="/results" element={<ResultChecker />} />
-            <Route path="/pending-approval" element={<Suspense fallback={<PageLoader />}><PendingApproval /></Suspense>} />
+            <Route path="/pending-approval" element={<Suspense fallback={<PageLoader />}><PendingApprovalPage /></Suspense>} />
 
             {/* Protected Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
@@ -91,6 +97,7 @@ function App() {
                 <Route path="manage-gallery" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminGallery /></Suspense></ProtectedRoute>} />
                 <Route path="manage-programs" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminPrograms /></Suspense></ProtectedRoute>} />
                 <Route path="manage-exams" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminExams /></Suspense></ProtectedRoute>} />
+                <Route path="users" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminUsers /></Suspense></ProtectedRoute>} />
                 <Route path="class-analytics" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminClassAnalytics /></Suspense></ProtectedRoute>} />
                 <Route path="class-browser" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminClassBrowser /></Suspense></ProtectedRoute>} />
                 <Route path="manage-reviews" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminReviews /></Suspense></ProtectedRoute>} />

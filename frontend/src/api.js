@@ -629,6 +629,88 @@ export async function getDefaultStream() {
     return data;
 }
 
+export async function getAdmins() {
+    const { data, error } = await insforge.database.from('users').select('id,name,email,role').eq('role', 'ADMIN').order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return data || []
+}
+
+export async function createAdminUser(form) {
+    const pwd = form.password || 'admin123'
+    const hash = await bcrypt.hash(pwd, 10)
+    const { error } = await insforge.database.from('users').insert([{ name: form.name, email: form.email, password_hash: hash, role: 'ADMIN' }])
+    if (error) throw new Error(error.message)
+    return { success: true }
+}
+
+export async function deleteUser(id) {
+    const { error } = await insforge.database.from('users').delete().eq('id', id)
+    if (error) throw new Error(error.message)
+    return { success: true }
+}
+
+// ========== AUTH (Local table login) ==========
+export async function login(email, password) {
+    const { data, error } = await insforge.database
+        .from('users').select('*').eq('email', email).maybeSingle();
+
+    if (error || !data) throw new Error('Invalid email or password');
+
+    const match = await bcrypt.compare(password, data.password_hash);
+    if (!match) throw new Error('Invalid email or password');
+
+    const user = { id: data.id, name: data.name, email: data.email, role: data.role };
+    const token = 'insforge_' + Date.now();
+    const academicYear = await getActiveAcademicYear();
+
+    if (data.role === 'TEACHER' || data.role === 'ADMIN') {
+        const { data: staff } = await insforge.database
+            .from('staff').select('*').eq('user_id', data.id).maybeSingle();
+        if (staff) {
+            user.staff_id = staff.id;
+            user.teacher_id = staff.id;
+        }
+    } else if (data.role === 'STUDENT') {
+        const { data: student } = await insforge.database
+            .from('students').select('*').eq('user_id', data.id).maybeSingle();
+        if (student) {
+            user.student_id = student.id;
+            if (academicYear) {
+                const { data: enroll } = await insforge.database.from('enrollments')
+                    .select('*, classes(name), sections(name)')
+                    .eq('student_id', student.id).eq('academic_year_id', academicYear.id).maybeSingle();
+                if (enroll) {
+                    user.enrollment_id = enroll.id;
+                    user.class_id = enroll.class_id;
+                    user.roll_number = enroll.roll_number;
+                    user.class_name = enroll.classes?.name;
+                    user.section = enroll.sections?.name;
+                }
+            }
+        }
+    } else if (data.role === 'PARENT') {
+        const { data: children } = await insforge.database
+            .from('students').select('id, user_id').eq('parent_user_id', data.id);
+        user.student_ids = (children || []).map(c => c.id);
+        if (children?.length > 0) {
+            user.student_id = children[0].id;
+            if (academicYear) {
+                const { data: enroll } = await insforge.database.from('enrollments')
+                    .select('*, classes(name), sections(name)')
+                    .eq('student_id', children[0].id).eq('academic_year_id', academicYear.id).maybeSingle();
+                if (enroll) {
+                    user.enrollment_id = enroll.id;
+                    user.class_id = enroll.class_id;
+                    user.class_name = enroll.classes?.name;
+                    user.section = enroll.sections?.name;
+                }
+            }
+        }
+    }
+
+    return { token, user };
+}
+
 export async function register(name, email, password, role) {
     const { data, error } = await insforge.functions.invoke('auth-signup', {
         body: { name, email, password, role }
@@ -675,7 +757,7 @@ export async function rejectUser(targetUserId) {
 
 // =====================================================
 
-export async function login(email, password) {
+export async function loginViaInsforgeAuth(email, password) {
     // Use Native Supabase Auth to securely log in and automatically persist session cookies
     const { data: authData, error: authError } = await insforge.auth.signInWithPassword({
         email,
@@ -920,10 +1002,11 @@ export async function updateStudent(id, form) {
     const { data: student } = await insforge.database.from('students').select('user_id').eq('id', id).maybeSingle();
     if (!student) throw new Error('Student not found');
 
-    if (form.name || form.email) {
+    if (form.name || form.email || form.password) {
         const userUpdate = {};
         if (form.name) userUpdate.name = form.name;
         if (form.email) userUpdate.email = form.email;
+        if (form.password) userUpdate.password_hash = await bcrypt.hash(form.password, 10);
         if (student.user_id) await insforge.database.from('users').update(userUpdate).eq('id', student.user_id);
     }
 
@@ -1030,10 +1113,11 @@ export async function updateTeacher(id, form) {
     const { data: teacher } = await insforge.database.from('staff').select('user_id').eq('id', id).maybeSingle();
     if (!teacher) throw new Error('Teacher not found');
 
-    if (form.name || form.email) {
+    if (form.name || form.email || form.password) {
         const uUpdate = {};
         if (form.name) uUpdate.name = form.name;
         if (form.email) uUpdate.email = form.email;
+        if (form.password) uUpdate.password_hash = await bcrypt.hash(form.password, 10);
         if (teacher.user_id) await insforge.database.from('users').update(uUpdate).eq('id', teacher.user_id);
     }
     const tUpdate = {};
@@ -1321,6 +1405,7 @@ export async function updateParent(id, form) {
     const update = {};
     if (form.name !== undefined) update.name = form.name;
     if (form.email !== undefined) update.email = form.email;
+    if (form.password) update.password_hash = await bcrypt.hash(form.password, 10);
     if (Object.keys(update).length > 0) await insforge.database.from('users').update(update).eq('id', id);
     if (Array.isArray(form.student_ids)) {
         await insforge.database.from('students').update({ parent_user_id: null }).eq('parent_user_id', id);

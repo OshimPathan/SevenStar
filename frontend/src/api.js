@@ -712,15 +712,51 @@ export async function login(email, password) {
 }
 
 export async function register(name, email, password, role) {
-    const { data, error } = await insforge.functions.invoke('auth-signup', {
-        body: { name, email, password, role }
+    // 1. Create the user in Auth
+    const { data: authData, error: authError } = await insforge.auth.signUp({
+        email,
+        password,
+        options: {
+            data: { name, role }
+        }
     });
 
-    if (error || !data || data.error) {
-        throw new Error(data?.error || 'Registration failed');
+    if (authError) {
+        throw new Error(authError.message || 'Failed to register authentication');
     }
 
-    return data;
+    const authUser = authData.user;
+    if (!authUser) {
+        throw new Error('Account created but login requires confirmation');
+    }
+
+    // 2. Hash password for local login fallback
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // 3. Insert into public.users with PENDING status
+    const { data: newUser, error: insertError } = await insforge.database
+        .from('users')
+        .insert([{
+            id: authUser.id,
+            name,
+            email,
+            password_hash: passwordHash,
+            role: role.toUpperCase(),
+            status: 'PENDING'
+        }])
+        .select('id, name, email, role, status')
+        .single();
+
+    if (insertError) {
+        console.error('Insert error:', insertError);
+        throw new Error('Failed to create account details');
+    }
+
+    return {
+        message: 'Account created successfully. Waiting for admin approval.',
+        user: newUser
+    };
 }
 
 // ============== ADMIN USER APPROVAL API ==============

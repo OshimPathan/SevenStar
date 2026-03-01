@@ -1,8 +1,30 @@
 # 🏫 Seven Star English Boarding School — ERP & Website
 
-> A full-stack **School Enterprise Resource Planning (ERP)** system and public website for **Seven Star English Boarding School**, Devdaha, Rupandehi (Lumbini Province, Nepal). Quality English-medium education from **Nursery to +2**, NEB-affiliated programs in Management, Computer Science & Education. Established **2063 B.S.**
+> A **production-ready**, full-stack **School Enterprise Resource Planning (ERP)** system and public website for **Seven Star English Boarding School**, Devdaha, Rupandehi (Lumbini Province, Nepal). Quality English-medium education from **Nursery to +2**, NEB-affiliated programs in Management, Computer Science & Education. Established **2063 B.S.**
 
 **🌐 Live URL:** [https://frontend-nu-eosin-89.vercel.app](https://frontend-nu-eosin-89.vercel.app)
+
+### At a Glance
+
+| Metric | Count |
+|--------|-------|
+| Database Tables | **55** (all with Row Level Security) |
+| API Functions | **165** exported async functions |
+| API Code | **2,952** lines (`api.js`) |
+| Dashboard Pages | **37** (27 Admin + 4 Student + 3 Teacher + 3 Student-extras) |
+| Landing Sections | **24** responsive components |
+| Public Routes | **8** (landing, login, admission, exam schedule, results, etc.) |
+| Dashboard Routes | **34** protected routes |
+| User Roles | **5** (Admin, Teacher, Student, Parent, Accountant) |
+| Auth Accounts | **130** seeded |
+| Total Users | **1,341** |
+| Students | **1,286** across **15** classes |
+| Teachers | **54** |
+| Subjects | **33** with **113** class-subject mappings |
+| Exams | **4** with **46** exam-class links, **452** routines, **28,332** marks |
+| Attendance Records | **51,440** |
+| Fee Payments | **7,572** |
+| Salary Records | **550** |
 
 ---
 
@@ -18,7 +40,7 @@
 - [Features — Admin Dashboard](#features--admin-dashboard)
 - [Features — Teacher Dashboard](#features--teacher-dashboard)
 - [Features — Student / Parent Dashboard](#features--student--parent-dashboard)
-- [API Layer (64+ Functions)](#api-layer-64-functions)
+- [API Layer (165 Functions)](#api-layer-165-functions)
 - [Routing & Access Control](#routing--access-control)
 - [Design System](#design-system)
 - [Storage & File Uploads](#storage--file-uploads)
@@ -35,22 +57,26 @@
 
 This project is a **complete digital platform** for managing all aspects of a K-12 school with +2 programs. It combines:
 
-1. **A public-facing website** — Landing page with 15 sections showcasing the school's identity, programs, facilities, gallery, testimonials, fee structure, admissions, and contact.
-2. **A role-based ERP dashboard** — Full school management system supporting four user roles: **Admin**, **Teacher**, **Student**, and **Parent**, each with dedicated views and capabilities.
-3. **A Backend-as-a-Service (BaaS) layer** — All data persistence, authentication, storage, and real-time capabilities powered by **Supabase** (PostgreSQL + Storage + SDK).
+1. **A public-facing website** — 24-component landing page showcasing the school's identity, programs, facilities, gallery, testimonials, fee structure, admissions, exam schedules, and contact.
+2. **A role-based ERP dashboard** — Full school management system with **37 dashboard pages** supporting five user roles: **Admin**, **Teacher**, **Student**, **Parent**, and **Accountant**, each with dedicated views and capabilities.
+3. **A Backend-as-a-Service (BaaS) layer** — All data persistence, authentication, storage, and security powered by **Supabase** (PostgreSQL 17.6 + Row Level Security + Storage + SDK), hosted in `ap-south-1` (Mumbai).
 
 ### What Problems It Solves
 
 | Problem | Solution |
 |---------|----------|
-| Paper-based attendance tracking | Digital daily attendance with teacher-marked records, class-wise filtering |
-| Manual exam result compilation | Centralized marks entry, grade computation, per-student result sheets |
-| Fee collection opacity | Digital fee ledger with PAID/UNPAID/PARTIAL tracking, overdue detection |
-| No online school presence | 15-section responsive landing page with SEO-friendly content |
-| Disconnected parent communication | Parent portal with real-time access to child's results, fees, and notices |
-| Admission paper forms | Online admission application with status tracking (PENDING/ACCEPTED/REJECTED) |
-| Photo/document management | Cloud storage for student photos, certificates, and gallery images |
+| Paper-based attendance tracking | Digital daily attendance with teacher-marked records, class-wise filtering, admin attendance reports |
+| Manual exam result compilation | Multi-class exam management, bulk mark entry, auto grade computation, exam routines with per-subject full/pass marks |
+| Fee collection opacity | Digital fee ledger with PAID/UNPAID/PARTIAL tracking, overdue detection, accounting module |
+| No online school presence | 24-section responsive landing page with live data from database |
+| Disconnected parent communication | Parent portal with real-time access to child's results, fees, notices, routine, and assignments |
+| Admission paper forms | Online admission application with status tracking (PENDING/ACCEPTED/REJECTED), admin management |
+| Photo/document management | Cloud storage for student photos, certificates, and gallery images (Supabase Storage) |
 | Scattered notice boards | Digital notice system with role-based targeting (ALL/TEACHER/STUDENT/PARENT/ADMIN) |
+| No salary/HR tracking | Staff salary management with base salary, deductions, net pay, and payment history |
+| Library/inventory chaos | Digital library catalog with book management and inventory tracking system |
+| Transport management | Bus route management, student transport assignment, fee tracking |
+| No exam scheduling | Exam routine builder with per-class, per-subject scheduling (date, time, room, marks) |
 
 ---
 
@@ -63,25 +89,28 @@ This project is a **complete digital platform** for managing all aspects of a K-
 │                                                             │
 │  ┌──────────┐  ┌─────────────┐  ┌────────────────────────┐  │
 │  │  Landing  │  │  VTOP-Style │  │   Role-Based Dashboard │  │
-│  │  (15 sec) │  │    Login    │  │  (Admin/Teacher/Stu/P) │  │
+│  │  (24 sec) │  │    Login    │  │  (37 pages, 5 roles)   │  │
 │  └──────────┘  └─────────────┘  └────────────────────────┘  │
 │                        │                                     │
 │               ┌────────┴────────┐                            │
 │               │    api.js       │                            │
-│               │  (64+ functions)│                            │
+│               │ (165 functions) │                            │
+│               │  (2,952 lines)  │                            │
 │               └────────┬────────┘                            │
 └────────────────────────┼────────────────────────────────────┘
                          │  Supabase SDK
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    SUPABASE                             │
+│               SUPABASE (ap-south-1, Mumbai)                 │
 │                                                             │
 │  ┌──────────────┐  ┌───────────┐  ┌──────────────────────┐  │
 │  │  PostgreSQL   │  │  Storage  │  │  Authentication      │  │
-│  │  (13 tables)  │  │ (buckets) │  │  (JWT + bcrypt)      │  │
+│  │  (55 tables)  │  │ (buckets) │  │  (130 accounts)      │  │
+│  │  RLS on all   │  │           │  │  (JWT + Supabase)    │  │
 │  └──────────────┘  └───────────┘  └──────────────────────┘  │
 │                                                             │
-│  Base URL: https://egzhmzsntrlabfkdvngk.supabase.co            │
+│  Base URL: https://egzhmzsntrlabfkdvngk.supabase.co        │
+│  Postgres 17.6 │ ~107K+ records │ Active: 2025-2026       │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -137,7 +166,10 @@ collegewebsite/
 │
 ├── backend/                           # Express.js backend (secondary)
 │   ├── package.json
-│   ├── schema.sql                     # Complete PostgreSQL schema (13 tables)
+│   ├── schema.sql                     # Complete PostgreSQL schema
+│   ├── seed.sql                       # Database seed data
+│   ├── rls_policies.sql               # Row Level Security policies
+│   ├── storage_policies.sql           # Storage bucket policies
 │   └── src/
 │       ├── index.js                   # Express server entry (port 5000)
 │       ├── db.js                      # PostgreSQL pool connection
@@ -164,65 +196,125 @@ collegewebsite/
     ├── public/                        # Static assets
     └── src/
         ├── main.jsx                   # React root + Router + AuthProvider
-        ├── App.jsx                    # Route definitions + ProtectedRoute
-        ├── api.js                     # 🔑 ALL API functions (64+, ~1100 lines)
+        ├── App.jsx                    # 42 route definitions + ProtectedRoute
+        ├── api.js                     # 🔑 ALL API functions (165 exports, 2,952 lines)
         ├── index.css                  # Tailwind directives + custom utilities
         │
         ├── context/
         │   └── AuthContext.jsx        # Auth state (user, token, login, logout)
         │
+        ├── hooks/
+        │   └── useScrollReveal.js     # Intersection Observer scroll animations
+        │
         ├── layouts/
         │   └── DashboardLayout.jsx    # Sidebar + header + role-based nav
         │
+        ├── lib/
+        │   ├── supabase.js            # Supabase client (env vars)
+        │   └── insforge.js            # Utility helpers
+        │
         ├── components/
-        │   └── landing/               # 15 landing page sections
+        │   ├── ErrorBoundary.jsx      # Global error boundary
+        │   ├── FormField.jsx          # Reusable form field component
+        │   ├── CSVImportModal.jsx     # CSV bulk import modal
+        │   └── landing/               # 24 landing page components
         │       ├── Navbar.jsx         # Sticky nav with mobile drawer
-        │       ├── Hero.jsx           # Image carousel (4 slides)
+        │       ├── Hero.jsx           # Image carousel with school branding
+        │       ├── NoticeTicker.jsx   # Scrolling notice ticker
         │       ├── NoticeBoard.jsx    # Live notices from DB
+        │       ├── QuickInfoBar.jsx   # Quick info strip
         │       ├── About.jsx          # School history & mission
+        │       ├── AchievementsStrip.jsx # Achievements showcase
+        │       ├── Highlights.jsx     # School highlights
         │       ├── Programs.jsx       # NEB programs + subjects from DB
+        │       ├── ClassesSections.jsx # Classes & sections overview
         │       ├── Stats.jsx          # Animated counter stats
         │       ├── Facilities.jsx     # Campus facilities grid
         │       ├── Gallery.jsx        # Photo gallery with lightbox
+        │       ├── UpcomingExams.jsx   # Upcoming exam schedule
         │       ├── WhyChooseUs.jsx    # USP cards
+        │       ├── AdmissionBanner.jsx # Admission CTA banner
+        │       ├── Admissions.jsx     # Admission info & form
+        │       ├── FeeStructure.jsx   # Fee breakdown by class
         │       ├── Team.jsx           # Faculty showcase
         │       ├── Testimonials.jsx   # Student/parent reviews from DB
         │       ├── Contact.jsx        # Contact form + map
+        │       ├── FloatingActions.jsx # Floating action buttons
+        │       ├── ScrollReveal.jsx   # Scroll animation wrapper
         │       └── Footer.jsx         # Site footer with links
         │
+        ├── utils/
+        │   └── generateReportCard.js  # PDF report card generation
+        │
         └── pages/
-            ├── Landing.jsx            # Assembles all 15 sections
+            ├── Landing.jsx            # Assembles all landing sections
             ├── Login.jsx              # VTOP-style login with spotlight
-            └── dashboard/             # 15 dashboard pages
-                ├── AdminDashboard.jsx # Role-aware stats + charts
-                ├── AdminStudents.jsx  # Student CRUD + photo/cert upload
-                ├── AdminTeachers.jsx  # Teacher CRUD + subject assignment
-                ├── AdminClasses.jsx   # Class CRUD + subject management
-                ├── AdminParents.jsx   # Parent account management
-                ├── AdminNotices.jsx   # Notice CRUD (role-targeted)
-                ├── AdminEvents.jsx    # Event CRUD
-                ├── AdminGallery.jsx   # Gallery photo upload/manage
-                ├── AdminPrograms.jsx  # Program subjects & syllabus
-                ├── TeacherAttendance.jsx  # Daily attendance marking
-                ├── TeacherMarks.jsx   # Exam marks entry
-                ├── TeacherStudents.jsx # View assigned students (detailed)
-                ├── StudentNotices.jsx # View notices
-                ├── StudentResults.jsx # View exam results & grades
-                └── StudentFees.jsx    # View fee details & status
+            ├── AdmissionForm.jsx      # Public admission application
+            ├── ExamSchedule.jsx       # Public exam schedule viewer
+            ├── ResultChecker.jsx      # Public result checker
+            ├── ForgotPassword.jsx     # Password reset request
+            ├── ResetPassword.jsx      # Password reset form
+            ├── PendingApprovalPage.jsx # Pending account approval
+            └── dashboard/             # 37 dashboard pages
+                ├── AdminDashboard.jsx       # Role-aware stats + charts
+                ├── AdminStudents.jsx        # Student CRUD + photo/cert upload
+                ├── AdminTeachers.jsx        # Teacher CRUD + subject assignment
+                ├── AdminClasses.jsx         # Class CRUD + subject management
+                ├── AdminParents.jsx         # Parent account management
+                ├── AdminNotices.jsx         # Notice CRUD (role-targeted)
+                ├── AdminEvents.jsx          # Event CRUD
+                ├── AdminGallery.jsx         # Gallery photo upload/manage
+                ├── AdminPrograms.jsx        # Program subjects & syllabus
+                ├── AdminExams.jsx           # Multi-class exam management + routines
+                ├── AdminMarkEntry.jsx       # Bulk mark entry per class/exam
+                ├── AdminResults.jsx         # View/publish results with grades
+                ├── AdminReviews.jsx         # Review moderation
+                ├── AdminAdmissions.jsx      # Admission application management
+                ├── AdminFees.jsx            # Fee management & tracking
+                ├── AdminSalary.jsx          # Staff salary management
+                ├── AdminAccounting.jsx      # Accounting & financial reports
+                ├── AdminAttendance.jsx      # Attendance reports & analytics
+                ├── AdminUsers.jsx           # User account management
+                ├── AdminApprovals.jsx       # Account approval workflow
+                ├── AdminSettings.jsx        # Site settings & configuration
+                ├── AdminClassAnalytics.jsx  # Per-class analytics
+                ├── AdminClassBrowser.jsx    # Class browser overview
+                ├── AdminLibrary.jsx         # Library catalog management
+                ├── AdminTransport.jsx       # Transport route management
+                ├── AdminInventory.jsx       # Inventory tracking
+                ├── AdminTimetable.jsx       # Timetable builder
+                ├── TeacherAttendance.jsx    # Daily attendance marking
+                ├── TeacherMarks.jsx         # Exam marks entry
+                ├── TeacherStudents.jsx      # View assigned students
+                ├── TeacherAssignments.jsx   # Assignment management
+                ├── StudentNotices.jsx       # View notices
+                ├── StudentResults.jsx       # View exam results & grades
+                ├── StudentFees.jsx          # View fee details & status
+                ├── StudentSubjects.jsx      # View enrolled subjects
+                ├── StudentRoutine.jsx       # View exam routine
+                └── StudentAssignments.jsx   # View assignments
 ```
 
 ---
 
 ## Database Schema
 
+### Overview
+
+The database consists of **55 PostgreSQL tables** hosted on Supabase (Postgres 17.6), all protected with **Row Level Security (RLS)** policies. The active academic year is **2025-2026**.
+
 ### Entity-Relationship Overview
 
 ```
-users ──┬── teachers ──── teacher_subjects ──── subjects ──── classes
-        │                                                       │
-        ├── students ─────┬── attendance                        │
-        │                 ├── results ── exams ─────────────────┘
-        │                 └── fees
+users ──┬── staff ──── salary_payments
+        │
+        ├── teachers ──── teacher_subjects ──── subjects ──── class_subjects ──── classes
+        │                                                                          │
+        ├── students ─── enrollments ─┬── attendance                               │
+        │                             ├── exam_marks ── exam_routines ── exams ── exam_classes
+        │                             ├── fee_payments                              │
+        │                             ├── result_summaries                          │
+        │                             └── student_assignments ── assignments ───────┘
         │
         └── (created_by) ── notices
                              events
@@ -231,62 +323,105 @@ users ──┬── teachers ──── teacher_subjects ──── subjec
                              program_subjects
                              site_settings
                              reviews
+                             academic_years
+                             timetable_entries
+                             library_books
+                             transport_routes / vehicles / student_transport
+                             inventory_items / inventory_transactions
 ```
 
-### Tables (13 Core + 4 Extended)
+### Core Tables (55 total, all with RLS)
 
-| Table | Columns | Purpose |
+| Table | Records | Purpose |
 |-------|---------|---------|
-| **users** | id, name, email, password_hash, role (ADMIN/TEACHER/STUDENT/PARENT), created_at, updated_at | Central authentication for all roles |
-| **classes** | id, name, section, stream, created_at | Academic classes (Nursery → +2 Science/Mgmt/Education) |
-| **subjects** | id, name, code, class_id (FK), created_at | Per-class subjects |
-| **teachers** | id, user_id (FK→users), employee_id, phone, address, qualification, joined_date | Teacher profiles |
-| **students** | id, user_id (FK→users), admission_number, class_id (FK), roll_number, date_of_birth, blood_group, address, parent_name, parent_phone, parent_email, parent_user_id (FK→users), photo_url, certificate_url, gender, nationality, religion, mother_name, mother_phone, emergency_contact, previous_school, previous_class | Student profiles with extended fields |
-| **teacher_subjects** | teacher_id (FK), subject_id (FK) | Many-to-many teacher ↔ subject mapping |
-| **attendance** | id, student_id (FK), class_id (FK), date, status (PRESENT/ABSENT/LATE/HALF_DAY), marked_by (FK→users) | Daily attendance records |
-| **exams** | id, name, class_id (FK), exam_type, full_marks, pass_marks, start_date, end_date | Exam definitions (Unit Test/Mid-term/Final/Pre-board) |
-| **results** | id, exam_id (FK), student_id (FK), subject_id (FK), marks_obtained, total_marks, grade, remarks | Per-student per-subject exam marks |
-| **fees** | id, student_id (FK), amount, due_date, status (PAID/UNPAID/PARTIAL), amount_paid, description | Fee ledger |
-| **notices** | id, title, content, target_role (ALL/TEACHER/STUDENT/PARENT/ADMIN), created_by (FK→users) | Role-targeted announcements |
-| **events** | id, title, description, start_date, end_date, location | School calendar events |
-| **admission_applications** | id, student_name, date_of_birth, parent_name, parent_phone, parent_email, address, applied_for_class, previous_school, status (PENDING/ACCEPTED/REJECTED) | Online admission pipeline |
-| **gallery_photos** | id, title, description, image_url, category, created_at | School photo gallery (stored in Supabase Storage) |
-| **program_subjects** | id, class_name, subject_name, credit_hours, description, syllabus_url | Academic program catalog |
-| **site_settings** | id, key, value | Key-value site configuration |
-| **reviews** | id, name, role, content, rating, approved, created_at | Student/parent testimonials with moderation |
+| **users** | 1,341 | Central auth for all roles (ADMIN/TEACHER/STUDENT/PARENT) |
+| **students** | 1,286 | Student profiles with extended fields |
+| **enrollments** | 1,286 | Class enrollment with roll numbers per academic year |
+| **teachers** | 54 | Teacher profiles with qualifications |
+| **staff** | 55 | All staff records (teachers + admin) |
+| **classes** | 15 | Nursery → +2 (Science/Mgmt/Education) |
+| **subjects** | 33 | Subject catalog |
+| **class_subjects** | 113 | Class ↔ Subject mappings |
+| **teacher_subjects** | — | Teacher ↔ Subject assignments |
+| **academic_years** | 1 | Active: 2025-2026 |
+| **exams** | 4 | Exam definitions (Unit Test/Mid-term/Final/Pre-board) |
+| **exam_classes** | 46 | Multi-class ↔ Exam linkage |
+| **exam_routines** | 452 | Per-class, per-subject exam schedules (date, time, room, marks) |
+| **exam_marks** | 28,332 | Student marks with grade_point |
+| **result_summaries** | — | Per-student per-exam aggregated results with GPA |
+| **attendance** | 51,440 | Daily: PRESENT/ABSENT/LATE/HALF_DAY |
+| **fee_payments** | 7,572 | Fee tracking with PAID/UNPAID/PARTIAL |
+| **salary_payments** | 550 | Staff salary: base_salary, deductions, net_salary |
+| **notices** | 18 | Role-targeted announcements |
+| **events** | 12 | School calendar events |
+| **admission_applications** | 20 | Online admission pipeline (PENDING/ACCEPTED/REJECTED) |
+| **gallery_photos** | 15 | School photo gallery |
+| **program_subjects** | — | Academic program catalog |
+| **assignments** | 30 | Teacher-created assignments |
+| **student_assignments** | — | Student assignment submissions |
+| **library_books** | 50 | Library catalog |
+| **inventory_items** | 30 | School inventory |
+| **inventory_transactions** | — | Inventory movement tracking |
+| **transport_routes** | 8 | Bus routes |
+| **vehicles** | — | Transport vehicles |
+| **student_transport** | — | Student transport assignments |
+| **timetable_entries** | — | Weekly class timetable |
+| **site_settings** | — | Key-value site configuration |
+| **reviews** | — | Student/parent testimonials |
 
 ### Key Relationships
 
 - A **User** can be linked to exactly one **Teacher**, **Student**, or **Parent** profile
-- A **Student** belongs to one **Class** and optionally links to a **Parent** user
+- A **Student** has an **Enrollment** record per academic year (containing `roll_number`, `class_id`)
 - **Teachers** are assigned to **Subjects** via the `teacher_subjects` join table
+- **Exam routines** have UNIQUE constraint on `(exam_id, class_id, subject_id)` with per-subject `full_marks` and `pass_marks`
+- **Exams** support multiple classes via `exam_classes` (one exam → many classes)
 - **Attendance** records are per-student per-date (unique constraint)
-- **Results** are per-exam per-student per-subject (unique constraint)
-- **Subjects** cascade-delete when their parent **Class** is deleted
+- **Exam marks** reference `grade_point` (not GPA); `result_summaries` has `gpa`
+- **Students → Users** FK requires disambiguation: `users!students_user_id_fkey`
 
 ---
 
 ## Features — Landing Page (Public)
 
-The landing page consists of **15 responsive sections**, all data-driven from the database:
+The landing page consists of **24 responsive components**, many data-driven from the database:
 
-| # | Section | Description | Data Source |
-|---|---------|-------------|-------------|
+| # | Component | Description | Data Source |
+|---|-----------|-------------|-------------|
 | 1 | **Navbar** | Sticky navigation with mobile hamburger drawer, smooth-scroll to sections | Static |
-| 2 | **Hero** | Full-screen image carousel (4 slides) with school branding, CTA buttons | Static slides |
-| 3 | **NoticeBoard** | Live scrolling notices with date badges | `notices` table via API |
-| 4 | **About** | School history (est. 2063 B.S.), mission, vision, core values | Static |
-| 5 | **Programs** | NEB-affiliated +2 programs with expandable subject lists | `program_subjects` table via API |
-| 6 | **Stats** | Animated counters (students, teachers, years, programs) | Static |
-| 7 | **Facilities** | Grid of campus facilities (labs, library, sports, etc.) | Static |
-| 8 | **Gallery** | Photo grid with category filtering and lightbox zoom | `gallery_photos` table + Supabase Storage |
-| 9 | **WhyChooseUs** | USP cards highlighting differentiators | Static |
-| 10 | **Admissions** | Admission process steps and online application form | `admission_applications` table |
-| 11 | **FeeStructure** | Fee breakdown by class level | Static |
-| 12 | **Team** | Faculty cards with qualifications | Static |
-| 13 | **Testimonials** | Student/parent reviews with star ratings | `reviews` table (approved only) |
-| 14 | **Contact** | Contact form, school address, phone, email, embedded map | Static |
-| 15 | **Footer** | Quick links, social media, copyright | Static |
+| 2 | **Hero** | Full-screen image carousel with school branding, CTA buttons | Static slides |
+| 3 | **NoticeTicker** | Horizontal scrolling notice ticker bar | `notices` table via API |
+| 4 | **NoticeBoard** | Live scrolling notices with date badges | `notices` table via API |
+| 5 | **QuickInfoBar** | Quick info strip with key school details | Static |
+| 6 | **About** | School history (est. 2063 B.S.), mission, vision, core values | Static |
+| 7 | **AchievementsStrip** | Achievement highlights showcase | Static |
+| 8 | **Highlights** | School highlights and key differentiators | Static |
+| 9 | **Programs** | NEB-affiliated +2 programs with expandable subject lists | `program_subjects` table via API |
+| 10 | **ClassesSections** | Classes & sections overview | `classes` table via API |
+| 11 | **Stats** | Animated counters (students, teachers, years, programs) | Static |
+| 12 | **Facilities** | Grid of campus facilities (labs, library, sports, etc.) | Static |
+| 13 | **Gallery** | Photo grid with category filtering and lightbox zoom | `gallery_photos` table + Supabase Storage |
+| 14 | **UpcomingExams** | Upcoming exam schedules from DB | `exam_routines` table via API |
+| 15 | **WhyChooseUs** | USP cards highlighting differentiators | Static |
+| 16 | **AdmissionBanner** | Admission CTA banner with link to form | Static |
+| 17 | **Admissions** | Admission process steps and online application | `admission_applications` table |
+| 18 | **FeeStructure** | Fee breakdown by class level | Static |
+| 19 | **Team** | Faculty cards with qualifications | Static |
+| 20 | **Testimonials** | Student/parent reviews with star ratings | `reviews` table (approved only) |
+| 21 | **Contact** | Contact form, school address, phone, email, embedded map | Static |
+| 22 | **FloatingActions** | Floating action buttons (phone, scroll-top) | Static |
+| 23 | **ScrollReveal** | Intersection Observer animation wrapper | Utility |
+| 24 | **Footer** | Quick links, social media, copyright | Static |
+
+### Additional Public Pages
+
+| Page | Path | Description |
+|------|------|-------------|
+| **AdmissionForm** | `/admission` | Standalone online admission application form |
+| **ExamSchedule** | `/exam-schedule` | Public exam routine viewer |
+| **ResultChecker** | `/results` | Public result lookup by student |
+| **ForgotPassword** | `/forgot-password` | Password reset request |
+| **ResetPassword** | `/reset-password` | Password reset form |
 
 ---
 
@@ -317,7 +452,7 @@ The landing page consists of **15 responsive sections**, all data-driven from th
 
 ## Features — Admin Dashboard
 
-Admins have **full control** over all school data:
+Admins have **full control** over all school data across **27 dedicated pages**:
 
 ### Dashboard Home (`/dashboard`)
 - **Stat Cards**: Total Students, Total Teachers, Today's Attendance %, Pending Fees — all from real DB queries
@@ -336,7 +471,6 @@ Admins have **full control** over all school data:
 - **Extended fields**: Gender, nationality, religion, blood group, mother info, emergency contact, previous school details
 - **Class assignment**: Dropdown to assign students to classes
 - **Parent linking**: Associate students with parent user accounts
-- **Academic history**: Admission number, roll number, DOB tracking
 
 ### Teacher Management (`/dashboard/teachers`)
 - Full CRUD for teacher profiles
@@ -347,28 +481,71 @@ Admins have **full control** over all school data:
 - Create/delete classes with name, section, stream
 - Per-class subject management (add/remove subjects with codes)
 - Cascading subject deletion when class is removed
-- Average students per class stat with NaN protection
 
-### Parent Management (`/dashboard/parents`)
-- Create/delete parent accounts
-- Link parents to student records
+### Exam Management (`/dashboard/manage-exams`)
+- **Multi-class exam creation**: Create exams linked to multiple classes simultaneously
+- **Exam routine builder**: Per-class, per-subject scheduling with date, start/end time, room, full marks, pass marks
+- **Bulk routine save**: Save all routines for an exam at once
+- **View/filter by class**: Class picker in schedule and results modals
+- **Exam types**: Unit Test, Mid-term, Final, Pre-board
 
-### Notice Management (`/dashboard/manage-notices`)
-- CRUD for notices with role targeting (ALL/TEACHER/STUDENT/PARENT/ADMIN)
-- Notices appear on login spotlight and student notice board
+### Mark Entry (`/dashboard/mark-entry`)
+- Select class → exam → subject flow
+- Bulk mark entry for all students in a class
+- Auto-loads existing marks for editing
+- Per-subject full_marks and pass_marks from exam_routines
 
-### Event Management (`/dashboard/manage-events`)
-- CRUD for school events with title, description, dates, location
+### Results Management (`/dashboard/admin-results`)
+- View results by class and exam
+- Grade auto-computation with grade_point
+- Result summaries with GPA calculation
+- FK disambiguation for complex student→user joins
 
-### Gallery Management (`/dashboard/manage-gallery`)
-- Upload photos to Supabase `gallery` storage bucket
-- Add title, description, category per photo
-- Photos appear on landing page Gallery section
+### Attendance Reports (`/dashboard/manage-attendance`)
+- Admin-level attendance analytics
+- Class-wise and date-range attendance reports
 
-### Program & Syllabus Management (`/dashboard/manage-programs`)
-- Manage academic program subjects
-- Credit hours, descriptions, syllabus document links
-- Data feeds into landing page Programs section
+### Fee Management (`/dashboard/manage-fees`)
+- Fee creation and tracking across students
+- PAID/UNPAID/PARTIAL status management
+
+### Salary Management (`/dashboard/salary`)
+- Staff salary records: base_salary, deductions, net_salary
+- Payment history tracking
+
+### Accounting (`/dashboard/accounting`)
+- Financial overview and reports
+- Available to ADMIN and ACCOUNTANT roles
+
+### Library Management (`/dashboard/library`)
+- Book catalog management (50 books seeded)
+- Add/edit/delete library books
+
+### Transport Management (`/dashboard/transport`)
+- Bus route management (8 routes seeded)
+- Vehicle tracking and student transport assignments
+
+### Inventory Management (`/dashboard/inventory`)
+- School inventory tracking (30 items seeded)
+- Inventory transaction logging
+
+### Timetable Builder (`/dashboard/timetable`)
+- Weekly class timetable management
+- Period ↔ subject ↔ teacher mapping
+
+### Additional Admin Pages
+- **Parent Management** (`/dashboard/parents`): Create/delete parent accounts, link to students
+- **Notice Management** (`/dashboard/manage-notices`): CRUD with role targeting
+- **Event Management** (`/dashboard/manage-events`): School calendar events
+- **Gallery Management** (`/dashboard/manage-gallery`): Photo upload to Supabase Storage
+- **Program Management** (`/dashboard/manage-programs`): Academic program catalog
+- **Review Moderation** (`/dashboard/manage-reviews`): Approve/reject testimonials
+- **Admission Management** (`/dashboard/admissions`): Application pipeline (PENDING/ACCEPTED/REJECTED)
+- **User Management** (`/dashboard/users`): All user account management
+- **Account Approvals** (`/dashboard/approvals`): Approve pending registrations
+- **Class Analytics** (`/dashboard/class-analytics`): Per-class performance analytics
+- **Class Browser** (`/dashboard/class-browser`): Browse classes with details
+- **Settings** (`/dashboard/settings`): Site-wide configuration
 
 ---
 
@@ -390,6 +567,10 @@ Admins have **full control** over all school data:
 - Grade auto-computation, remarks field
 - Bulk save marks
 
+### Assignments (`/dashboard/assignments-manage`)
+- Create and manage assignments per class/subject
+- Track student submissions
+
 ### My Students (`/dashboard/my-students`)
 - View all students in teacher's assigned classes
 - Photo thumbnails in student table
@@ -407,8 +588,18 @@ Admins have **full control** over all school data:
 - Parent accounts see their linked child's data
 
 ### Results (`/dashboard/results`)
-- View exam-wise results with marks, grades, and remarks
-- Subject-by-subject breakdown
+- View exam-wise results with marks, grades, and grade points
+- Subject-by-subject breakdown with full_marks and pass_marks per subject
+
+### Subjects (`/dashboard/subjects`)
+- View enrolled subjects for current class
+
+### Exam Routine (`/dashboard/routine`)
+- View upcoming exam schedule with dates, times, and rooms
+
+### Assignments (`/dashboard/assignments`)
+- View assignments posted by teachers
+- Track submission status
 
 ### Fee Details (`/dashboard/fees`)
 - View all fee records with amount, due date, payment status
@@ -420,9 +611,9 @@ Admins have **full control** over all school data:
 
 ---
 
-## API Layer (64+ Functions)
+## API Layer (165 Functions)
 
-All API communication is centralized in `frontend/src/api.js` (~1,100 lines) using the Supabase SDK. No REST calls to the Express backend.
+All API communication is centralized in `frontend/src/api.js` (2,952 lines) using the Supabase SDK. No REST calls to the Express backend.
 
 ### Function Categories
 
@@ -507,15 +698,22 @@ All API communication is centralized in `frontend/src/api.js` (~1,100 lines) usi
 </details>
 
 <details>
-<summary><strong>Exams (5 functions)</strong></summary>
+<summary><strong>Exams & Routines (12+ functions)</strong></summary>
 
 | Function | Description |
 |----------|-------------|
-| `getExams()` | List all exams |
-| `getExamsByClass(classId)` | Exams for a specific class |
-| `createExam(data)` | Create exam definition |
-| `deleteExam(id)` | Delete exam |
+| `getExams()` | List all exams with class_ids array via exam_classes |
+| `getExamsByClass(classId)` | Exams for a specific class via exam_classes |
+| `createExam(data)` | Create exam with multi-class support (classIds array) |
+| `deleteExam(id)` | Delete exam + cascade exam_classes |
 | `publishResults(examId)` | Publish results for an exam |
+| `getExamRoutines(examId, classId)` | Get routines for exam+class combination |
+| `saveBulkExamRoutines(routines)` | Bulk upsert exam routines (date, time, room, marks) |
+| `getExamMarks(examId, classId, subjectId)` | Get marks for mark entry |
+| `saveBulkExamMarks(marks)` | Bulk save student marks |
+| `getResultsForClassExam(classId, examId)` | Results with FK disambiguation |
+| `getResultSummaries(examId, classId)` | Aggregated results with GPA |
+| `getExamRoutinesPublic()` | Public exam schedule for landing page |
 
 </details>
 
@@ -616,32 +814,151 @@ All API communication is centralized in `frontend/src/api.js` (~1,100 lines) usi
 
 </details>
 
+<details>
+<summary><strong>Salary & Accounting (6+ functions)</strong></summary>
+
+| Function | Description |
+|----------|-------------|
+| `getSalaryPayments()` | List all salary records |
+| `createSalaryPayment(data)` | Create salary payment |
+| `updateSalaryPayment(id, data)` | Update salary record |
+| `deleteSalaryPayment(id)` | Delete salary record |
+| `getAccountingStats()` | Financial overview stats |
+| `getStaff()` | List all staff members |
+
+</details>
+
+<details>
+<summary><strong>Library Management (4+ functions)</strong></summary>
+
+| Function | Description |
+|----------|-------------|
+| `getLibraryBooks()` | List all books |
+| `createLibraryBook(data)` | Add new book |
+| `updateLibraryBook(id, data)` | Update book details |
+| `deleteLibraryBook(id)` | Remove book from catalog |
+
+</details>
+
+<details>
+<summary><strong>Transport Management (4+ functions)</strong></summary>
+
+| Function | Description |
+|----------|-------------|
+| `getTransportRoutes()` | List all bus routes |
+| `createTransportRoute(data)` | Add new route |
+| `updateTransportRoute(id, data)` | Update route |
+| `deleteTransportRoute(id)` | Delete route |
+
+</details>
+
+<details>
+<summary><strong>Inventory Management (4+ functions)</strong></summary>
+
+| Function | Description |
+|----------|-------------|
+| `getInventoryItems()` | List all inventory |
+| `createInventoryItem(data)` | Add inventory item |
+| `updateInventoryItem(id, data)` | Update item |
+| `deleteInventoryItem(id)` | Remove item |
+
+</details>
+
+<details>
+<summary><strong>Assignments (5+ functions)</strong></summary>
+
+| Function | Description |
+|----------|-------------|
+| `getAssignments()` | List all assignments |
+| `createAssignment(data)` | Create assignment |
+| `updateAssignment(id, data)` | Update assignment |
+| `deleteAssignment(id)` | Delete assignment |
+| `getStudentAssignments(studentId)` | View student's assignments |
+
+</details>
+
+<details>
+<summary><strong>Admissions, Users, Settings, Timetable (15+ functions)</strong></summary>
+
+| Function | Description |
+|----------|-------------|
+| `getAdmissionApplications()` | List all admission applications |
+| `updateAdmissionStatus(id, status)` | Accept/reject applications |
+| `getUsers()` | List all user accounts |
+| `updateUserStatus(id, status)` | Approve/disable users |
+| `getSiteSettings()` | Get key-value settings |
+| `updateSiteSetting(key, value)` | Update a setting |
+| `getTimetableEntries(classId)` | Get timetable for a class |
+| `saveTimetableEntry(data)` | Save timetable entry |
+| `deleteTimetableEntry(id)` | Delete timetable entry |
+| `getAcademicYears()` | List academic years |
+| `getClassAnalytics(classId)` | Class performance data |
+| `getEnrollments(classId)` | Enrollment records per class |
+| ... | *And more — 165 total exports* |
+
+</details>
+
 ---
 
 ## Routing & Access Control
 
-### Route Map
+### Route Map (42 routes total)
 
-| Path | Component | Access | Description |
-|------|-----------|--------|-------------|
-| `/` | Landing | Public | Full school website |
-| `/login` | Login | Public | VTOP-style authentication |
-| `/dashboard` | AdminDashboard | All authenticated | Role-aware dashboard home |
-| `/dashboard/students` | AdminStudents | ADMIN | Student management |
-| `/dashboard/teachers` | AdminTeachers | ADMIN | Teacher management |
-| `/dashboard/classes` | AdminClasses | ADMIN | Class & subject management |
-| `/dashboard/parents` | AdminParents | ADMIN | Parent management |
-| `/dashboard/attendance` | TeacherAttendance | ADMIN, TEACHER | Attendance marking |
-| `/dashboard/exams` | TeacherMarks | ADMIN, TEACHER | Marks entry |
-| `/dashboard/my-students` | TeacherStudents | TEACHER | View assigned students |
-| `/dashboard/notices` | StudentNotices | All authenticated | View notices |
-| `/dashboard/manage-notices` | AdminNotices | ADMIN | Notice CRUD |
-| `/dashboard/manage-events` | AdminEvents | ADMIN | Event CRUD |
-| `/dashboard/manage-gallery` | AdminGallery | ADMIN | Gallery management |
-| `/dashboard/manage-programs` | AdminPrograms | ADMIN | Program management |
-| `/dashboard/results` | StudentResults | ADMIN, STUDENT, PARENT | View results |
-| `/dashboard/fees` | StudentFees | ADMIN, STUDENT, PARENT | View fees |
-| `*` | Redirect → `/` | — | Catch-all |
+#### Public Routes (8)
+
+| Path | Component | Description |
+|------|-----------|-------------|
+| `/` | Landing | Full school website |
+| `/login` | Login | VTOP-style authentication |
+| `/forgot-password` | ForgotPassword | Password reset request |
+| `/reset-password` | ResetPassword | Password reset form |
+| `/admission` | AdmissionForm | Online admission application |
+| `/exam-schedule` | ExamSchedule | Public exam schedule viewer |
+| `/results` | ResultChecker | Public result lookup |
+| `/pending-approval` | PendingApprovalPage | Pending account status |
+
+#### Dashboard Routes (34)
+
+| Path | Component | Access |
+|------|-----------|--------|
+| `/dashboard` | AdminDashboard | All authenticated |
+| `/dashboard/students` | AdminStudents | ADMIN |
+| `/dashboard/teachers` | AdminTeachers | ADMIN |
+| `/dashboard/classes` | AdminClasses | ADMIN |
+| `/dashboard/parents` | AdminParents | ADMIN |
+| `/dashboard/users` | AdminUsers | ADMIN |
+| `/dashboard/approvals` | AdminApprovals | ADMIN |
+| `/dashboard/manage-notices` | AdminNotices | ADMIN |
+| `/dashboard/manage-events` | AdminEvents | ADMIN |
+| `/dashboard/manage-gallery` | AdminGallery | ADMIN |
+| `/dashboard/manage-programs` | AdminPrograms | ADMIN |
+| `/dashboard/manage-exams` | AdminExams | ADMIN |
+| `/dashboard/mark-entry` | AdminMarkEntry | ADMIN |
+| `/dashboard/admin-results` | AdminResults | ADMIN |
+| `/dashboard/manage-fees` | AdminFees | ADMIN |
+| `/dashboard/salary` | AdminSalary | ADMIN |
+| `/dashboard/manage-attendance` | AdminAttendance | ADMIN |
+| `/dashboard/manage-reviews` | AdminReviews | ADMIN |
+| `/dashboard/admissions` | AdminAdmissions | ADMIN |
+| `/dashboard/class-analytics` | AdminClassAnalytics | ADMIN |
+| `/dashboard/class-browser` | AdminClassBrowser | ADMIN |
+| `/dashboard/library` | AdminLibrary | ADMIN |
+| `/dashboard/transport` | AdminTransport | ADMIN |
+| `/dashboard/inventory` | AdminInventory | ADMIN |
+| `/dashboard/timetable` | AdminTimetable | ADMIN |
+| `/dashboard/settings` | AdminSettings | ADMIN |
+| `/dashboard/accounting` | AdminAccounting | ADMIN, ACCOUNTANT |
+| `/dashboard/attendance` | TeacherAttendance | ADMIN, TEACHER |
+| `/dashboard/exams` | TeacherMarks | ADMIN, TEACHER |
+| `/dashboard/assignments-manage` | TeacherAssignments | TEACHER |
+| `/dashboard/my-students` | TeacherStudents | TEACHER |
+| `/dashboard/notices` | StudentNotices | All authenticated |
+| `/dashboard/results` | StudentResults | ADMIN, STUDENT, PARENT |
+| `/dashboard/fees` | StudentFees | ADMIN, STUDENT, PARENT |
+| `/dashboard/subjects` | StudentSubjects | STUDENT, PARENT |
+| `/dashboard/routine` | StudentRoutine | STUDENT, PARENT |
+| `/dashboard/assignments` | StudentAssignments | STUDENT, PARENT |
+| `*` | Redirect → `/` | Catch-all |
 
 ### ProtectedRoute Component
 
@@ -660,9 +977,10 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 | Role | Sidebar Links |
 |------|---------------|
 | **All** | Dashboard, Notices |
-| **Admin** | + Students, Teachers, Classes & Subjects, Parents, Attendance, Exams & Marks, Manage Notices, Manage Events, Gallery Photos, Programs & Syllabus |
-| **Teacher** | + Attendance, Exams & Marks, My Students |
-| **Student / Parent** | + Results, Fee Details |
+| **Admin** | + Students, Teachers, Classes, Parents, Users, Approvals, Attendance, Exams, Mark Entry, Results, Fees, Salary, Accounting, Notices, Events, Gallery, Programs, Reviews, Admissions, Library, Transport, Inventory, Timetable, Class Analytics, Settings |
+| **Teacher** | + Attendance, Exams & Marks, Assignments, My Students |
+| **Student / Parent** | + Results, Subjects, Exam Routine, Assignments, Fee Details |
+| **Accountant** | + Accounting |
 
 ---
 
@@ -855,207 +1173,101 @@ Output Dir:      dist
 
 ## Future Roadmap
 
-### 🔴 Phase 1 — Critical Enhancements (High Priority)
+### ✅ Completed (Previously Planned)
 
-#### 1.1 Server-Side Password Hashing
-- **Current**: Passwords are hashed client-side using `bcryptjs` — the hash is stored directly in DB, but comparison happens in the browser
-- **Target**: Move password hashing to an Supabase Edge Function or the Express backend
-- **Why**: Client-side hashing means the hash itself becomes the password equivalent; intercepting it grants access
-- **Implementation**: Create an Supabase serverless function for `/auth/login` and `/auth/register` endpoints that handle bcrypt server-side
-
-#### 1.2 Proper JWT Authentication
-- **Current**: JWT tokens are mock-generated client-side; not verified by any server
-- **Target**: Implement proper JWT signing on the server (Supabase Edge Function or Express backend), verify tokens on protected API calls
-- **Implementation**: 
-  - Sign JWT with `HS256` or `RS256` in server function
-  - Add Supabase Row Level Security (RLS) policies tied to JWT claims
-  - Verify token on every SDK call via Supabase auth integration
-
-#### 1.3 Environment Variable Externalization
-- **Current**: Supabase base URL and anon key are hardcoded in `api.js`
-- **Target**: Move to Vite environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) loaded from `.env`
-- **Implementation**: Replace hardcoded values with `import.meta.env.VITE_*`
-
-#### 1.4 Row Level Security (RLS)
-- **Current**: All database queries use the anon key with no row-level restrictions
-- **Target**: Implement PostgreSQL RLS policies so:
-  - Students can only read their own results/fees/attendance
-  - Teachers can only modify attendance/marks for their assigned classes
-  - Parents can only view their linked children's data
-  - Only admins can INSERT/UPDATE/DELETE on management tables
+| Feature | Status |
+|---------|--------|
+| Row Level Security (RLS) on all 55 tables | ✅ Done |
+| Environment variable externalization (VITE_*) | ✅ Done |
+| Exam Management Admin Page | ✅ Built — `/dashboard/manage-exams` with multi-class support |
+| Review Moderation Admin Page | ✅ Built — `/dashboard/manage-reviews` |
+| Admission Application Management | ✅ Built — `/dashboard/admissions` |
+| Report Card / Transcript Generation | ✅ Built — `generateReportCard.js` utility |
+| Timetable Management | ✅ Built — `/dashboard/timetable` |
+| Library Management Module | ✅ Built — `/dashboard/library` (50 books seeded) |
+| Transport Management Module | ✅ Built — `/dashboard/transport` (8 routes seeded) |
+| Bulk Data Operations | ✅ CSVImportModal component built |
+| Lazy Loading Dashboard Pages | ✅ All 37 pages use `React.lazy` + `Suspense` |
 
 ---
 
-### 🟡 Phase 2 — Feature Completions (Medium Priority)
+### 🔴 Phase 1 — Security Enhancements (High Priority)
 
-#### 2.1 Exam Management Admin Page
-- **Status**: API functions exist (`createExam`, `deleteExam`, `publishResults`) but no admin UI page
-- **Target**: Build `/dashboard/manage-exams` with:
-  - Create exam with name, class, exam type (Unit Test/Mid-term/Final/Pre-board), full marks, pass marks, date range
-  - View/edit/delete exams
-  - Publish results per exam
-  - Exam schedule calendar view
+#### 1.1 Server-Side Password Hashing
+- **Current**: Passwords are hashed client-side using `bcryptjs`
+- **Target**: Move password hashing to a Supabase Edge Function or the Express backend
+- **Why**: Client-side hashing means the hash itself becomes the password equivalent
 
-#### 2.2 Review Moderation Admin Page
-- **Status**: API functions exist (`getAllReviews`, `approveReview`, `deleteReview`) but no admin UI
-- **Target**: Build `/dashboard/manage-reviews` with:
-  - List all submitted reviews (pending + approved)
-  - Approve/reject individual reviews
-  - Delete inappropriate reviews
-  - Star rating display, submission date, reviewer info
+#### 1.2 Proper JWT Authentication
+- **Current**: JWT tokens are mock-generated client-side; not verified by any server
+- **Target**: Implement proper JWT signing on the server, verify tokens on protected API calls
+- **Implementation**: Sign JWT server-side, add Supabase RLS policies tied to JWT claims
 
-#### 2.3 Admission Application Management
-- **Status**: Admission form exists on landing page, applications stored in `admission_applications` table
-- **Target**: Build `/dashboard/admissions` for admin with:
-  - List all pending/accepted/rejected applications
-  - View full application details
-  - Accept → auto-create student account
-  - Reject with reason
-  - Export applications as CSV/PDF
+---
 
-#### 2.4 Report Card / Transcript Generation
-- **Target**: Generate printable PDF report cards per student per exam
-- **Implementation**:
-  - Use `html2pdf.js` or `jspdf` for client-side PDF generation
-  - Include school letterhead, student photo, subject-wise marks, grade summary, teacher remarks, principal signature placeholder
-  - Batch generation for entire class
+### 🟡 Phase 2 — Feature Enhancements (Medium Priority)
 
-#### 2.5 Fee Payment Integration
+#### 2.1 Fee Payment Integration
 - **Current**: Fee tracking is read-only (no payment processing)
 - **Target**: Integrate payment gateway (Khalti / eSewa for Nepal)
-- **Implementation**:
-  - Add payment initiation from StudentFees page
-  - Webhook handler (Supabase Edge Function) for payment confirmation
-  - Auto-update fee status from UNPAID → PAID on successful payment
-  - Payment receipt generation
 
-#### 2.6 SMS / Email Notifications
-- **Target**: Automated notifications for:
-  - Fee due reminders (3 days before, on due date, overdue)
-  - Attendance alerts (child absent notification to parent)
-  - Exam results published
-  - New notice posted
-- **Implementation**: Supabase Edge Functions triggering email (Resend/SendGrid) or SMS (Sparrow SMS for Nepal)
+#### 2.2 SMS / Email Notifications
+- **Target**: Automated notifications for fee reminders, attendance alerts, results published
+- **Implementation**: Supabase Edge Functions triggering email (Resend) or SMS (Sparrow SMS)
+
+#### 2.3 Hostel Management Module
+- **New tables**: `hostels`, `rooms`, `room_assignments`
+- **Features**: Room allocation, hostel fee tracking
+
+#### 2.4 Real-Time Features (Supabase WebSocket)
+- **Target**: Live attendance updates, real-time notice push, dashboard auto-refresh
 
 ---
 
 ### 🟢 Phase 3 — Advanced Features (Lower Priority)
 
-#### 3.1 Timetable Management
-- **Target**: Weekly class timetable builder with:
-  - Drag-and-drop timetable creation
-  - Period ↔ subject ↔ teacher mapping
-  - Clash detection (same teacher assigned to two classes simultaneously)
-  - Student view of their weekly schedule
-  - Teacher view of their teaching schedule
+#### 3.1 Multi-Language Support (i18n)
+- English (default) + Nepali (नेपाली)
 
-#### 3.2 Library Management Module
-- **New tables**: `books`, `book_issues`, `book_returns`
-- **Features**: Book catalog, issue/return tracking, overdue alerts, student borrowing history
+#### 3.2 Mobile App (React Native)
+- Parent app + Teacher app, reusing `api.js` functions
 
-#### 3.3 Transport Management Module
-- **New tables**: `buses`, `routes`, `bus_assignments`
-- **Features**: Bus route management, student bus assignment, route fee tracking, driver details
+#### 3.3 AI-Powered Features
+- Automated report card remarks, performance prediction, chatbot
 
-#### 3.4 Hostel Management Module
-- **New tables**: `hostels`, `rooms`, `room_assignments`
-- **Features**: Room allocation, hostel fee tracking, roommate management
-
-#### 3.5 Real-Time Features (Supabase WebSocket)
-- **Target**: Leverage Supabase real-time pub/sub for:
-  - Live attendance updates (teacher marks → parent sees immediately)
-  - Real-time notice push notifications
-  - Live chat between teachers and parents
-  - Dashboard stat auto-refresh
-
-#### 3.6 Analytics & Reporting Dashboard
-- **Target**: Advanced analytics with:
-  - Student performance trends over multiple exams (line charts)
-  - Class-wise attendance heatmaps
-  - Fee collection trends (monthly/quarterly/yearly)
-  - Teacher workload analysis
-  - Student demographic breakdowns
-  - Exportable reports (PDF, Excel)
-
-#### 3.7 Multi-Language Support (i18n)
-- **Target**: Support for:
-  - English (default)
-  - Nepali (नेपाली) — primary local language
-- **Implementation**: `react-i18next` with JSON translation files
-
-#### 3.8 Mobile App (React Native)
-- **Target**: Native mobile app for:
-  - Parent app: View child attendance, results, fees, notices
-  - Teacher app: Mark attendance, enter marks on mobile
-  - Push notifications via Firebase Cloud Messaging
-- **Implementation**: Reuse `api.js` functions with React Native UI
-
-#### 3.9 AI-Powered Features
-- **Target**: Leverage Supabase AI integration for:
-  - Automated report card remarks based on marks/attendance
-  - Student performance prediction (at-risk detection)
-  - Chatbot for common parent queries (fees, schedule, etc.)
-  - Smart timetable generation avoiding conflicts
-
-#### 3.10 Bulk Data Operations
-- **Target**: 
-  - CSV import for student enrollment (bulk admission)
-  - CSV import for fee records
-  - Excel export for attendance sheets, mark sheets, fee reports
-  - Bulk result publishing across multiple exams
+#### 3.4 Analytics & Reporting Dashboard
+- Student performance trends, attendance heatmaps, fee collection trends
 
 ---
 
 ### 🔵 Phase 4 — Infrastructure & DevOps
 
 #### 4.1 Testing Suite
-- **Unit Tests**: Vitest for api.js functions (mock Supabase SDK)
-- **Component Tests**: Testing Library for React components
-- **E2E Tests**: Playwright for full user flows (login → dashboard → operations)
-- **Coverage Target**: 80%+ on critical paths
+- Unit Tests (Vitest), Component Tests (Testing Library), E2E Tests (Playwright)
 
 #### 4.2 CI/CD Pipeline
-- **Target**: GitHub Actions workflow for:
-  - Lint (ESLint) on PR
-  - Type checking (optional TypeScript migration)
-  - Build verification
-  - Auto-deploy to Vercel on `main` merge
+- GitHub Actions: lint, build, auto-deploy to Vercel
 
 #### 4.3 TypeScript Migration
-- **Current**: Pure JavaScript (`.js`, `.jsx`)
-- **Target**: Gradual migration to TypeScript (`.ts`, `.tsx`)
-- **Priority files**: `api.js` → `api.ts` (type-safe API layer), `AuthContext` → typed context
+- Gradual migration: `api.js` → `api.ts`, typed contexts
 
 #### 4.4 Error Monitoring
-- **Target**: Integrate Sentry for:
-  - Frontend error tracking
-  - API call failure monitoring
-  - Performance monitoring (LCP, FID, CLS)
-
-#### 4.5 SEO & Performance
-- **Target**:
-  - Add meta tags, Open Graph, Twitter cards
-  - Implement lazy loading for dashboard pages (`React.lazy` + `Suspense`)
-  - Image optimization (WebP conversion, responsive sizes)
-  - Lighthouse score ≥ 90 on all categories
+- Sentry integration for frontend error tracking
 
 ---
 
 ## Known Limitations
 
-| Area | Limitation | Impact | Workaround |
-|------|-----------|--------|------------|
-| **Authentication** | Password hashing is client-side (bcryptjs) | Hash becomes password-equivalent; insecure for production | Move to server-side Edge Function |
-| **Authorization** | No Row Level Security (RLS) on database | Any authenticated user could potentially query any data via SDK | Implement PostgreSQL RLS policies |
-| **JWT** | Tokens are mock-generated client-side | No server-side verification or expiration | Implement proper server-signed JWTs |
-| **Anon Key** | Hardcoded in source code | Exposed in client bundle (by design for BaaS, but needs RLS) | Add RLS policies to restrict access |
-| **Backend** | Express backend is not actively used | Frontend bypasses it entirely | Either migrate to it or remove |
-| **Payments** | Fee tracking is read-only | No actual payment processing | Integrate Khalti/eSewa gateway |
-| **Notifications** | No email/SMS notifications | Users must log in to check updates | Add notification service |
-| **File Validation** | No server-side file type/size validation | Malicious files could be uploaded | Add validation in Edge Function |
-| **Search** | No full-text search on student/teacher lists | Difficult to find records in large datasets | Implement search with Supabase queries |
-| **Pagination** | Most lists load all records at once | Performance degrades with large datasets | Implement cursor-based pagination |
-| **Offline** | No offline support | App unusable without internet | Consider service workers / PWA |
+| Area | Limitation | Status |
+|------|-----------|--------|
+| **Authentication** | Password hashing is client-side (bcryptjs) | Planned fix: server-side Edge Function |
+| **JWT** | Tokens are mock-generated client-side | Planned fix: server-signed JWTs |
+| **RLS** | RLS policies enabled on all 55 tables (read for authenticated, write for admin) | ✅ Implemented |
+| **Backend** | Express backend is not actively used; frontend uses Supabase SDK directly | Legacy — may be removed |
+| **Payments** | Fee tracking is read-only (no payment processing) | Planned: Khalti/eSewa integration |
+| **Notifications** | No email/SMS notifications | Planned: Supabase Edge Functions |
+| **Pagination** | Most lists load all records at once | Consider cursor-based pagination for scale |
+| **Offline** | No offline support / PWA | Consider service workers for future |
 
 ---
 

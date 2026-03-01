@@ -18,7 +18,7 @@ const AdminReviews = () => {
     const fetchReviews = async () => {
         try {
             const data = await getAllReviews();
-            setReviews(data);
+            setReviews(Array.isArray(data) ? data : []);
         } catch (err) { showToast(err.message, 'error'); }
         finally { setLoading(false); }
     };

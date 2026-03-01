@@ -16,9 +16,9 @@ const Team = () => {
     const others = boardMembers.filter(m => m.role !== "Chairman" && m.role !== "Principal / Secretary");
 
     return (
-        <section id="team" className="py-16 md:py-20 bg-gray-50">
+        <section id="team" className="py-12 sm:py-16 md:py-20 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-14">
+                <div className="text-center mb-10 sm:mb-14">
                     <h2 className="section-title">Our Leadership</h2>
                     <div className="section-divider" />
                     <p className="section-subtitle">
@@ -27,20 +27,20 @@ const Team = () => {
                 </div>
 
                 {/* Featured: Chairman & Principal */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10 max-w-4xl mx-auto">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-8 mb-8 sm:mb-10 max-w-4xl mx-auto">
                     {featured.map((member, idx) => (
-                        <div key={idx} className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow border-t-4 border-t-primary">
-                            <div className="p-8 text-center">
+                        <div key={idx} className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow border-t-4 border-t-primary">
+                            <div className="p-5 sm:p-8 text-center">
                                 <img
                                     src={member.image}
                                     alt={member.name}
-                                    className="w-28 h-28 rounded-full mx-auto mb-5 object-cover border-4 border-primary/10 shadow-lg"
+                                    className="w-20 h-20 sm:w-28 sm:h-28 rounded-full mx-auto mb-3 sm:mb-5 object-cover border-4 border-primary/10 shadow-lg"
                                 />
-                                <h3 className="text-lg font-bold text-gray-900 font-serif mb-1">{member.name}</h3>
-                                <span className="inline-block px-3 py-1 bg-accent/15 text-accent-dark text-xs font-bold rounded uppercase tracking-wide mb-4">
+                                <h3 className="text-base sm:text-lg font-bold text-gray-900 font-serif mb-1">{member.name}</h3>
+                                <span className="inline-block px-3 py-1 bg-accent/15 text-accent-dark text-xs font-bold rounded uppercase tracking-wide mb-3 sm:mb-4">
                                     {member.role}
                                 </span>
-                                <div className="space-y-2 text-sm text-gray-500">
+                                <div className="space-y-1.5 sm:space-y-2 text-sm text-gray-500">
                                     <div className="flex items-center justify-center gap-2">
                                         <Phone className="w-4 h-4 text-primary" />
                                         <a href={`tel:+977${member.phone}`} className="hover:text-primary transition-colors">{member.phone}</a>
@@ -48,7 +48,7 @@ const Team = () => {
                                     {member.email && (
                                         <div className="flex items-center justify-center gap-2">
                                             <Mail className="w-4 h-4 text-primary" />
-                                            <a href={`mailto:${member.email}`} className="hover:text-primary transition-colors text-xs">{member.email}</a>
+                                            <a href={`mailto:${member.email}`} className="hover:text-primary transition-colors text-xs truncate max-w-[180px]">{member.email}</a>
                                         </div>
                                     )}
                                 </div>
@@ -58,17 +58,17 @@ const Team = () => {
                 </div>
 
                 {/* Other Members */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-5">
                     {others.map((member, idx) => (
-                        <div key={idx} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow text-center p-5 border-t-2 border-t-accent group">
+                        <div key={idx} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow text-center p-3 sm:p-5 border-t-2 border-t-accent group">
                             <img
                                 src={member.image}
                                 alt={member.name}
-                                className="w-20 h-20 rounded-full mx-auto mb-3 object-cover border-2 border-gray-100 group-hover:border-primary/20 transition-colors"
+                                className="w-14 h-14 sm:w-20 sm:h-20 rounded-full mx-auto mb-2 sm:mb-3 object-cover border-2 border-gray-100 group-hover:border-primary/20 transition-colors"
                             />
-                            <h4 className="text-sm font-bold text-gray-900 mb-0.5">{member.name}</h4>
-                            <span className="text-[11px] text-gray-500 font-medium">{member.role}</span>
-                            <div className="mt-2 text-xs text-gray-400">
+                            <h4 className="text-xs sm:text-sm font-bold text-gray-900 mb-0.5 truncate">{member.name}</h4>
+                            <span className="text-[10px] sm:text-[11px] text-gray-500 font-medium">{member.role}</span>
+                            <div className="mt-1.5 sm:mt-2 text-[10px] sm:text-xs text-gray-400">
                                 <a href={`tel:+977${member.phone}`} className="hover:text-primary transition-colors">{member.phone}</a>
                             </div>
                         </div>

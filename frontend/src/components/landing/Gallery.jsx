@@ -60,15 +60,15 @@ const Gallery = () => {
     }
 
     return (
-        <section id="gallery" className="py-16 md:py-20 bg-white">
+        <section id="gallery" className="py-12 sm:py-16 md:py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-14">
+                <div className="text-center mb-10 sm:mb-14">
                     <h2 className="section-title">Life at Seven Star</h2>
                     <div className="section-divider" />
                     <p className="section-subtitle">Glimpses of academic and extracurricular activities at our campus.</p>
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                     {images.map((img, idx) => (
                         <div
                             key={img.id || idx}
@@ -105,46 +105,25 @@ const Gallery = () => {
             {/* Lightbox with Slider */}
             {selectedIdx !== null && (
                 <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" onClick={closeLightbox}>
-                    {/* Close button */}
-                    <button className="absolute top-4 right-4 z-50 text-white/70 hover:text-white transition-colors p-2" onClick={closeLightbox}>
-                        <X className="w-7 h-7" />
+                    <button className="absolute top-3 right-3 sm:top-4 sm:right-4 z-50 text-white/70 hover:text-white transition-colors p-2" onClick={closeLightbox}>
+                        <X className="w-6 h-6 sm:w-7 sm:h-7" />
                     </button>
-
-                    {/* Counter */}
-                    <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 text-white/60 text-sm font-medium">
+                    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 text-white/60 text-xs sm:text-sm font-medium">
                         {selectedIdx + 1} / {images.length}
                     </div>
-
-                    {/* Previous */}
-                    <button
-                        onClick={goPrev}
-                        className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-50 w-12 h-12 bg-white/10 hover:bg-white/25 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
-                    >
-                        <ChevronLeft className="w-6 h-6" />
+                    <button onClick={goPrev} className="absolute left-1 sm:left-2 md:left-6 top-1/2 -translate-y-1/2 z-50 w-9 h-9 sm:w-12 sm:h-12 bg-white/10 hover:bg-white/25 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all active:scale-95">
+                        <ChevronLeft className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
-
-                    {/* Image */}
-                    <div className="max-w-[90vw] max-h-[85vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
-                        <img
-                            src={images[selectedIdx]?.image_url}
-                            alt={images[selectedIdx]?.title || 'Gallery'}
-                            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
-                        />
+                    <div className="max-w-[95vw] sm:max-w-[90vw] max-h-[85vh] flex items-center justify-center px-10 sm:px-0" onClick={e => e.stopPropagation()}>
+                        <img src={images[selectedIdx]?.image_url} alt={images[selectedIdx]?.title || 'Gallery'} className="max-w-full max-h-[75vh] sm:max-h-[80vh] object-contain rounded-lg shadow-2xl" />
                     </div>
-
-                    {/* Next */}
-                    <button
-                        onClick={goNext}
-                        className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-50 w-12 h-12 bg-white/10 hover:bg-white/25 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all"
-                    >
-                        <ChevronRight className="w-6 h-6" />
+                    <button onClick={goNext} className="absolute right-1 sm:right-2 md:right-6 top-1/2 -translate-y-1/2 z-50 w-9 h-9 sm:w-12 sm:h-12 bg-white/10 hover:bg-white/25 backdrop-blur-sm rounded-full flex items-center justify-center text-white transition-all active:scale-95">
+                        <ChevronRight className="w-5 h-5 sm:w-6 sm:h-6" />
                     </button>
-
-                    {/* Caption */}
-                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-center z-50">
-                        <p className="text-white font-semibold font-serif text-lg">{images[selectedIdx]?.title}</p>
+                    <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 text-center z-50 px-4">
+                        <p className="text-white font-semibold font-serif text-sm sm:text-lg">{images[selectedIdx]?.title}</p>
                         {images[selectedIdx]?.description && (
-                            <p className="text-white/60 text-sm mt-1">{images[selectedIdx].description}</p>
+                            <p className="text-white/60 text-xs sm:text-sm mt-1">{images[selectedIdx].description}</p>
                         )}
                     </div>
                 </div>

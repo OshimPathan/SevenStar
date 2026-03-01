@@ -42,7 +42,7 @@ const Stats = () => {
     ];
 
     return (
-        <section ref={ref} className="relative py-20 overflow-hidden">
+        <section ref={ref} className="relative py-12 sm:py-16 md:py-20 overflow-hidden">
             {/* Background */}
             <div className="absolute inset-0">
                 <img src="/gallery1.jpg" alt="" className="w-full h-full object-cover" />
@@ -50,12 +50,12 @@ const Stats = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div className="text-center mb-12">
-                    <h2 className="font-serif text-3xl md:text-4xl font-bold text-white mb-2">Facts & Figures</h2>
-                    <div className="w-20 h-1 bg-accent mx-auto mt-3"></div>
+                <div className="text-center mb-8 sm:mb-12">
+                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">Facts & Figures</h2>
+                    <div className="w-16 sm:w-20 h-1 bg-accent mx-auto mt-3"></div>
                 </div>
 
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                     {stats.map((stat, idx) => (
                         <StatItem key={idx} stat={stat} visible={visible} />
                     ))}
@@ -73,13 +73,13 @@ const StatItem = ({ stat, visible }) => {
     const count = useCountUp(stat.value, 2000, visible);
     return (
         <div className="text-center group">
-            <div className="flex justify-center mb-4 text-accent group-hover:-translate-y-1 transition-transform duration-300">
-                {stat.icon}
+            <div className="flex justify-center mb-2 sm:mb-4 text-accent group-hover:-translate-y-1 transition-transform duration-300">
+                <div className="[&>svg]:w-6 [&>svg]:h-6 sm:[&>svg]:w-8 sm:[&>svg]:h-8">{stat.icon}</div>
             </div>
-            <div className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-2 font-serif tabular-nums">
+            <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-1 sm:mb-2 font-serif tabular-nums">
                 {count}{stat.suffix}
             </div>
-            <div className="text-accent text-sm font-semibold uppercase tracking-[0.15em]">
+            <div className="text-accent text-xs sm:text-sm font-semibold uppercase tracking-[0.1em] sm:tracking-[0.15em]">
                 {stat.label}
             </div>
         </div>

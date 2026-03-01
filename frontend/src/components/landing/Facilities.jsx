@@ -15,22 +15,22 @@ const facilities = [
 
 const Facilities = () => {
     return (
-        <section id="facilities" className="py-16 md:py-20 bg-gray-50">
+        <section id="facilities" className="py-12 sm:py-16 md:py-20 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-12">
+                <div className="text-center mb-8 sm:mb-12">
                     <h2 className="section-title">Campus & Facilities</h2>
                     <div className="section-divider" />
                     <p className="section-subtitle">Modern infrastructure for an enriched learning environment</p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {facilities.map((f, idx) => (
-                        <div key={idx} className="flex items-start gap-4 p-5 rounded-xl border border-gray-100 bg-white hover:shadow-md transition-all group">
-                            <div className={`w-12 h-12 rounded-xl ${f.color} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
-                                {f.icon}
+                        <div key={idx} className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl border border-gray-100 bg-white hover:shadow-md transition-all group">
+                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${f.color} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                                <div className="[&>svg]:w-5 [&>svg]:h-5 sm:[&>svg]:w-6 sm:[&>svg]:h-6">{f.icon}</div>
                             </div>
                             <div className="min-w-0">
-                                <h4 className="font-bold text-gray-900 text-sm mb-1">{f.name}</h4>
+                                <h4 className="font-bold text-gray-900 text-sm mb-0.5 sm:mb-1">{f.name}</h4>
                                 <p className="text-xs text-gray-500 leading-relaxed">{f.desc}</p>
                             </div>
                         </div>

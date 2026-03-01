@@ -134,43 +134,43 @@ const WhyChooseUs = () => {
     ];
 
     return (
-        <section id="whychoose" className="py-16 md:py-24 bg-gray-900 text-white relative overflow-hidden">
+        <section id="whychoose" className="py-12 sm:py-16 md:py-24 bg-gray-900 text-white relative overflow-hidden">
             {/* Decorative elements */}
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/15 rounded-full blur-3xl -mr-48 -mt-48"></div>
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-accent/10 rounded-full blur-3xl -ml-40 -mb-40"></div>
+            <div className="absolute top-0 right-0 w-48 sm:w-96 h-48 sm:h-96 bg-primary/15 rounded-full blur-3xl -mr-24 sm:-mr-48 -mt-24 sm:-mt-48"></div>
+            <div className="absolute bottom-0 left-0 w-40 sm:w-80 h-40 sm:h-80 bg-accent/10 rounded-full blur-3xl -ml-20 sm:-ml-40 -mb-20 sm:-mb-40"></div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 {/* Header */}
-                <div className="text-center mb-16">
-                    <h2 className="font-serif text-3xl md:text-4xl font-bold mb-3">Why Choose Seven Star?</h2>
-                    <div className="w-20 h-1 bg-accent mx-auto mt-3 mb-6"></div>
-                    <p className="text-gray-400 max-w-3xl mx-auto leading-relaxed">
+                <div className="text-center mb-10 sm:mb-16">
+                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold mb-3">Why Choose Seven Star?</h2>
+                    <div className="w-16 sm:w-20 h-1 bg-accent mx-auto mt-3 mb-4 sm:mb-6"></div>
+                    <p className="text-gray-400 max-w-3xl mx-auto leading-relaxed text-sm">
                         For nearly two decades, Seven Star English Boarding School has been shaping future leaders in Devdaha, Rupandehi. Here's what sets us apart and why 900+ families trust us with their children's education.
                     </p>
                 </div>
 
                 {/* Cards Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
                     {reasons.map((reason, idx) => {
                         const isExpanded = expandedCard === idx;
                         return (
                             <div key={idx}
                                 className={`rounded-xl border transition-all duration-300 cursor-pointer group ${
                                     isExpanded
-                                        ? 'bg-white/10 border-accent/40 shadow-lg shadow-accent/5 md:col-span-2 lg:col-span-1'
+                                        ? 'bg-white/10 border-accent/40 shadow-lg shadow-accent/5'
                                         : 'bg-white/5 border-white/10 hover:border-accent/30 hover:bg-white/[0.08]'
                                 }`}
                                 onClick={() => setExpandedCard(isExpanded ? null : idx)}>
 
-                                <div className="p-6">
+                                <div className="p-4 sm:p-6">
                                     {/* Icon + Title */}
-                                    <div className="flex items-start gap-4 mb-4">
-                                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${reason.color} text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-lg`}>
-                                            {reason.icon}
+                                    <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
+                                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${reason.color} text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-lg`}>
+                                            <div className="[&>svg]:w-5 [&>svg]:h-5 sm:[&>svg]:w-6 sm:[&>svg]:h-6">{reason.icon}</div>
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="text-base font-bold font-serif leading-snug mb-1">{reason.title}</h3>
-                                            <p className="text-xs text-gray-400 leading-relaxed">{reason.summary}</p>
+                                            <h3 className="text-sm sm:text-base font-bold font-serif leading-snug mb-0.5 sm:mb-1">{reason.title}</h3>
+                                            <p className="text-[11px] sm:text-xs text-gray-400 leading-relaxed line-clamp-2">{reason.summary}</p>
                                         </div>
                                     </div>
 
@@ -200,17 +200,17 @@ const WhyChooseUs = () => {
                 </div>
 
                 {/* Bottom CTA */}
-                <div className="mt-14 text-center">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-8 max-w-3xl mx-auto backdrop-blur-sm">
-                        <h3 className="font-serif text-xl font-bold text-white mb-2">Ready to Join Seven Star Family?</h3>
-                        <p className="text-gray-400 text-sm mb-6 max-w-lg mx-auto">
+                <div className="mt-10 sm:mt-14 text-center">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-8 max-w-3xl mx-auto backdrop-blur-sm">
+                        <h3 className="font-serif text-lg sm:text-xl font-bold text-white mb-2">Ready to Join Seven Star Family?</h3>
+                        <p className="text-gray-400 text-xs sm:text-sm mb-4 sm:mb-6 max-w-lg mx-auto">
                             Experience the difference that 19+ years of educational excellence brings. Visit our campus or speak with our admissions team today.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                            <a href="#admissions" className="btn-primary px-8 py-3 inline-flex items-center gap-2 text-sm">
+                            <a href="#admissions" className="w-full sm:w-auto btn-primary px-6 sm:px-8 py-3 inline-flex items-center justify-center gap-2 text-sm">
                                 Apply for Admission <ArrowRight className="w-4 h-4" />
                             </a>
-                            <a href="#contact" className="btn-outline px-8 py-3 inline-flex items-center gap-2 text-sm border-white/30 text-white hover:bg-white/10">
+                            <a href="#contact" className="w-full sm:w-auto btn-outline px-6 sm:px-8 py-3 inline-flex items-center justify-center gap-2 text-sm border-white/30 text-white hover:bg-white/10">
                                 Contact Us
                             </a>
                         </div>

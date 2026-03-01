@@ -22,14 +22,15 @@ const TeacherAssignments = () => {
     const [filterStatus, setFilterStatus] = useState('ALL');
 
     useEffect(() => {
+        if (!user?.teacher_id) return;
         fetchAssignments();
         fetchClasses();
-    }, [user]);
+    }, [user?.teacher_id]);
 
     const fetchAssignments = async () => {
         try {
-            const data = await getTeacherAssignments(user.teacher_id);
-            setAssignments(data);
+            const data = await getTeacherAssignments(user?.teacher_id);
+            setAssignments(data || []);
         } catch (error) {
             console.error(error);
         } finally {
@@ -39,8 +40,8 @@ const TeacherAssignments = () => {
 
     const fetchClasses = async () => {
         try {
-            const data = await getTeacherClasses(user.teacher_id);
-            setClasses(data.classes || []);
+            const data = await getTeacherClasses(user?.teacher_id);
+            setClasses(data?.classes || []);
         } catch (error) {
             console.error(error);
         }

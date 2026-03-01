@@ -21,7 +21,7 @@ const AdminLibrary = () => {
         setLoading(true);
         try {
             const [bRes, iRes] = await Promise.all([getLibraryBooks({ search }), getLibraryIssues()]);
-            setBooks(bRes.books); setIssues(iRes.issues);
+            setBooks(bRes?.books || []); setIssues(iRes?.issues || []);
         } catch (e) { showToast(e.message, 'error'); }
         setLoading(false);
     };

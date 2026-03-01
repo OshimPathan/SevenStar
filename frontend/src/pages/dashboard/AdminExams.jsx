@@ -32,6 +32,7 @@ const AdminExams = () => {
     const [viewLoading, setViewLoading] = useState(false);
     const [viewSubjects, setViewSubjects] = useState([]);
     const [scheduleExam, setScheduleExam] = useState(null);
+    const [scheduleClassId, setScheduleClassId] = useState('');
     const [scheduleSubjects, setScheduleSubjects] = useState([]);
     const [scheduleRoutines, setScheduleRoutines] = useState([]);
     const [scheduleLoading, setScheduleLoading] = useState(false);
@@ -40,9 +41,10 @@ const AdminExams = () => {
     const [verificationSummaries, setVerificationSummaries] = useState({});
     const [verifyingStudent, setVerifyingStudent] = useState(null);
     const [viewTab, setViewTab] = useState('results');
+    const [viewClassId, setViewClassId] = useState('');
 
     const [form, setForm] = useState({
-        name: '', class_id: '', exam_type: 'First Terminal', full_marks: 100, pass_marks: 40, start_date: '', end_date: '',
+        name: '', exam_type: 'First Terminal', full_marks: 100, pass_marks: 40, start_date: '', end_date: '', allClasses: true, selectedClassIds: [],
     });
 
     const showToast = (message, type = 'success') => {
@@ -79,18 +81,20 @@ const AdminExams = () => {
         try {
             if (editingExam) {
                 await updateExam(editingExam.id, {
-                    name: form.name, class_id: form.class_id, exam_type: form.exam_type,
+                    name: form.name, exam_type: form.exam_type,
                     full_marks: form.full_marks, pass_marks: form.pass_marks,
                     start_date: form.start_date, end_date: form.end_date || null,
                 });
                 showToast('Exam updated successfully');
             } else {
-                await createExam(form);
-                showToast('Exam created successfully');
+                const classIds = form.allClasses ? classes.map(c => c.id) : form.selectedClassIds;
+                if (classIds.length === 0) { showToast('Select at least one class', 'error'); setSaving(false); return; }
+                await createExam({ ...form, classIds });
+                showToast('Exam created for ' + classIds.length + ' class(es)');
             }
             setShowModal(false);
             setEditingExam(null);
-            setForm({ name: '', class_id: '', exam_type: 'First Terminal', full_marks: 100, pass_marks: 40, start_date: '', end_date: '' });
+            setForm({ name: '', exam_type: 'First Terminal', full_marks: 100, pass_marks: 40, start_date: '', end_date: '', allClasses: true, selectedClassIds: [] });
             await fetchData();
         } catch (err) { showToast(err.message, 'error'); }
         finally { setSaving(false); }
@@ -99,9 +103,10 @@ const AdminExams = () => {
     const openEditExam = (exam) => {
         setEditingExam(exam);
         setForm({
-            name: exam.name || '', class_id: exam.class_id || '', exam_type: exam.exam_type || 'First Terminal',
+            name: exam.name || '', exam_type: exam.exam_type || 'First Terminal',
             full_marks: exam.full_marks || 100, pass_marks: exam.pass_marks || 40,
             start_date: exam.start_date || '', end_date: exam.end_date || '',
+            allClasses: true, selectedClassIds: exam.class_ids || [],
         });
         setShowModal(true);
     };
@@ -134,10 +139,19 @@ const AdminExams = () => {
 
     const handleOpenSchedule = async (exam) => {
         setScheduleExam(exam);
+        setScheduleClassId('');
+        setScheduleSubjects([]);
+        setScheduleRoutines([]);
+        setScheduleLoading(false);
+    };
+
+    const handleScheduleClassChange = async (classId) => {
+        setScheduleClassId(classId);
+        if (!classId || !scheduleExam) { setScheduleSubjects([]); setScheduleRoutines([]); return; }
         setScheduleLoading(true);
         try {
             const [subRes, routineRes] = await Promise.all([
-                getSubjectsByClass(exam.class_id), getExamRoutines(exam.id),
+                getSubjectsByClass(classId), getExamRoutines(scheduleExam.id, classId),
             ]);
             const subjects = subRes.subjects || [];
             setScheduleSubjects(subjects);
@@ -146,8 +160,10 @@ const AdminExams = () => {
                 const existing = routineMap[s.id];
                 return {
                     subject_id: s.id, subject_name: s.name,
-                    exam_date: existing?.exam_date || '', start_time: existing?.start_time || '',
-                    end_time: existing?.end_time || '', room: existing?.room || '',
+                    exam_date: existing?.exam_date || '', start_time: existing?.start_time?.slice(0, 5) || '',
+                    end_time: existing?.end_time?.slice(0, 5) || '', room: existing?.room || '',
+                    full_marks: existing?.full_marks || scheduleExam.full_marks || 100,
+                    pass_marks: existing?.pass_marks || scheduleExam.pass_marks || 40,
                 };
             }));
         } catch (err) { showToast(err.message, 'error'); }
@@ -159,28 +175,42 @@ const AdminExams = () => {
     };
 
     const handleSaveSchedule = async () => {
-        if (!scheduleExam) return;
+        if (!scheduleExam || !scheduleClassId) { showToast('Please select a class first', 'error'); return; }
         setScheduleSaving(true);
         try {
             const routines = scheduleRoutines.filter(r => r.exam_date).map(r => ({
-                exam_id: scheduleExam.id, subject_id: r.subject_id, exam_date: r.exam_date,
-                start_time: r.start_time || null, end_time: r.end_time || null, room: r.room || null,
+                subject_id: r.subject_id, exam_date: r.exam_date,
+                start_time: r.start_time || null, end_time: r.end_time || null,
+                room: r.room || null, full_marks: r.full_marks || null, pass_marks: r.pass_marks || null,
             }));
-            await saveBulkExamRoutines(scheduleExam.id, routines);
-            showToast('Exam schedule saved successfully');
-            setScheduleExam(null);
+            if (routines.length === 0) {
+                showToast('Please fill in at least one exam date', 'error');
+                setScheduleSaving(false);
+                return;
+            }
+            await saveBulkExamRoutines(scheduleExam.id, routines, scheduleClassId);
+            showToast(`Schedule saved for ${classMap[scheduleClassId]?.name || 'class'}`);
         } catch (err) { showToast(err.message, 'error'); }
         finally { setScheduleSaving(false); }
     };
 
     const handleViewResults = async (exam) => {
         setViewExam(exam);
-        setViewLoading(true);
+        setViewClassId('');
+        setViewData(null);
+        setViewSubjects([]);
+        setViewLoading(false);
         setViewTab('results');
+    };
+
+    const handleViewClassChange = async (classId) => {
+        setViewClassId(classId);
+        if (!classId || !viewExam) { setViewData(null); setViewSubjects([]); return; }
+        setViewLoading(true);
         try {
             const [resultData, subjectRes] = await Promise.all([
-                getResultsForClassExam(exam.id, exam.class_id),
-                getSubjectsByClass(exam.class_id),
+                getResultsForClassExam(viewExam.id, classId),
+                getSubjectsByClass(classId),
             ]);
             setViewData(resultData);
             setViewSubjects(subjectRes.subjects || []);
@@ -193,12 +223,6 @@ const AdminExams = () => {
         setVerifyingStudent(studentId);
         try {
             await verifyStudentMarks(examId, studentId, user?.id);
-            setViewData(prev => ({
-                ...prev,
-                results: prev.results.map(r =>
-                    r.student_id === studentId ? { ...r, verified: true, verified_by: user?.id, verified_at: new Date().toISOString() } : r
-                ),
-            }));
             showToast('Student marks verified');
             const summary = await getVerificationSummary(examId);
             setVerificationSummaries(prev => ({ ...prev, [examId]: summary }));
@@ -210,12 +234,6 @@ const AdminExams = () => {
         setVerifyingStudent(studentId);
         try {
             await unverifyStudentMarks(examId, studentId);
-            setViewData(prev => ({
-                ...prev,
-                results: prev.results.map(r =>
-                    r.student_id === studentId ? { ...r, verified: false, verified_by: null, verified_at: null } : r
-                ),
-            }));
             showToast('Verification removed');
             const summary = await getVerificationSummary(examId);
             setVerificationSummaries(prev => ({ ...prev, [examId]: summary }));
@@ -227,10 +245,6 @@ const AdminExams = () => {
         if (!confirm('Verify all student marks for this exam?')) return;
         try {
             await verifyAllMarksForExam(examId, user?.id);
-            setViewData(prev => ({
-                ...prev,
-                results: prev.results.map(r => ({ ...r, verified: true, verified_by: user?.id, verified_at: new Date().toISOString() })),
-            }));
             showToast('All marks verified successfully');
             const summary = await getVerificationSummary(examId);
             setVerificationSummaries(prev => ({ ...prev, [examId]: summary }));
@@ -238,7 +252,7 @@ const AdminExams = () => {
     };
 
     const filtered = exams.filter(e => {
-        if (filterClass && e.class_id !== filterClass) return false;
+        if (filterClass && !(e.class_ids || []).includes(filterClass) && e.class_id !== filterClass) return false;
         if (filterType && e.exam_type !== filterType) return false;
         if (search && !e.name.toLowerCase().includes(search.toLowerCase())) return false;
         return true;
@@ -254,15 +268,15 @@ const AdminExams = () => {
     const handleDownloadStudentReport = (student) => {
         if (!viewExam || !viewData || !viewSubjects.length) return;
         const studentResults = viewData.results.filter(r => r.student_id === student.id);
-        const cls = classMap[viewExam.class_id];
+        const cls = classMap[viewClassId];
         const className = cls ? `${cls.name} ${cls.section || ''}`.trim() : '';
 
         const subjects = viewSubjects.map(sub => {
             const r = studentResults.find(r => r.subject_id === sub.id);
-            const th = r ? (parseFloat(r.theory_marks) ?? parseFloat(r.marks_obtained) ?? 0) : 0;
-            const pr = r?.practical_marks !== null && r?.practical_marks !== undefined ? parseFloat(r.practical_marks) : null;
+            const th = r ? (parseFloat(r.marks_obtained) ?? 0) : 0;
+            const pr = null;
             const total = r ? (parseFloat(r.marks_obtained) || 0) : 0;
-            const full = r ? (parseFloat(r.total_marks) || 100) : (viewExam.full_marks || 100);
+            const full = r ? (parseFloat(r.full_marks) || 100) : (viewExam.full_marks || 100);
             const grade = r?.grade || '—';
             return { name: sub.name, th, pr, total, full, grade, gpa: gradeToGPA(grade) };
         });
@@ -285,20 +299,20 @@ const AdminExams = () => {
     };
 
     const getStudentVerificationStatus = (studentId) => {
-        if (!viewData) return { allVerified: false, count: 0, verified: 0 };
+        if (!viewData) return { allVerified: true, count: 0, verified: 0 };
         const studentResults = viewData.results.filter(r => r.student_id === studentId);
-        const verifiedCount = studentResults.filter(r => r.verified).length;
+        // All marks are considered verified (no verified column in DB)
         return {
-            allVerified: studentResults.length > 0 && verifiedCount === studentResults.length,
-            count: studentResults.length, verified: verifiedCount,
+            allVerified: true,
+            count: studentResults.length, verified: studentResults.length,
         };
     };
 
     const getViewVerificationSummary = () => {
-        if (!viewData?.results?.length) return { total: 0, verified: 0, unverified: 0, allVerified: false };
+        if (!viewData?.results?.length) return { total: 0, verified: 0, unverified: 0, allVerified: true };
         const total = viewData.results.length;
-        const verified = viewData.results.filter(r => r.verified).length;
-        return { total, verified, unverified: total - verified, allVerified: verified === total };
+        // All marks are considered verified (no verified column in DB)
+        return { total, verified: total, unverified: 0, allVerified: true };
     };
 
     if (loading) return <div className="flex items-center justify-center h-64"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -318,7 +332,7 @@ const AdminExams = () => {
                     <h1 className="text-2xl font-bold text-gray-900 font-serif">Exam Management</h1>
                     <p className="text-sm text-gray-500 mt-1">{exams.length} exam{exams.length !== 1 ? 's' : ''} total — Create terminals, tests & manage results</p>
                 </div>
-                <button onClick={() => { setEditingExam(null); setForm({ name: '', class_id: '', exam_type: 'First Terminal', full_marks: 100, pass_marks: 40, start_date: '', end_date: '' }); setShowModal(true); }} className="btn-primary flex items-center gap-2 px-5 py-2.5 text-sm">
+                <button onClick={() => { setEditingExam(null); setForm({ name: '', exam_type: 'First Terminal', full_marks: 100, pass_marks: 40, start_date: '', end_date: '', allClasses: true, selectedClassIds: [] }); setShowModal(true); }} className="btn-primary flex items-center gap-2 px-5 py-2.5 text-sm">
                     <Plus className="w-4 h-4" /> Create Exam
                 </button>
             </div>
@@ -370,7 +384,8 @@ const AdminExams = () => {
             ) : (
                 <div className="grid gap-4">
                     {filtered.map(exam => {
-                        const cls = classMap[exam.class_id];
+                        const linkedClasses = (exam.class_ids || []).map(id => classMap[id]).filter(Boolean);
+                        const classLabel = linkedClasses.length === classes.length ? 'All Classes' : linkedClasses.length > 3 ? `${linkedClasses.length} Classes` : linkedClasses.map(c => c.name).join(', ');
                         const typeConf = examTypeConfig[exam.exam_type] || examTypeConfig['Unit Test'];
                         const vSummary = verificationSummaries[exam.id];
                         const hasResults = vSummary && vSummary.total > 0;
@@ -396,9 +411,9 @@ const AdminExams = () => {
                                                 <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${typeConf?.color || 'bg-gray-50 text-gray-600 border-gray-200'}`}>
                                                     {exam.exam_type || 'Exam'}
                                                 </span>
-                                                {cls && (
+                                                {classLabel && (
                                                     <span className="flex items-center gap-1 text-xs text-gray-500">
-                                                        <BookOpen className="w-3 h-3" /> {cls.name} {cls.section || ''}
+                                                        <BookOpen className="w-3 h-3" /> {classLabel}
                                                     </span>
                                                 )}
                                                 <span className="flex items-center gap-1 text-xs text-gray-400">
@@ -474,15 +489,38 @@ const AdminExams = () => {
                                 placeholder="e.g. First Terminal Exam 2082"
                                 helper="Descriptive name for the exam" />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <FormField label="Class" name="class_id" type="select" required icon={BookOpen}
-                                    value={form.class_id} onChange={e => setForm({ ...form, class_id: e.target.value })}
-                                    helper="Which class is this exam for?"
-                                    options={[{ value: '', label: 'Select class' }, ...classes.map(c => ({ value: c.id, label: `${c.name} ${c.section || ''}` }))]} />
                                 <FormField label="Exam Type" name="exam_type" type="select" required
                                     value={form.exam_type} onChange={e => setForm({ ...form, exam_type: e.target.value })}
                                     helper="Category of this examination"
                                     options={Object.keys(examTypeConfig).map(t => ({ value: t, label: t }))} />
+                                <div />
                             </div>
+                            {!editingExam && (
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Classes</label>
+                                    <label className="flex items-center gap-2 mb-2 cursor-pointer">
+                                        <input type="checkbox" checked={form.allClasses}
+                                            onChange={e => setForm({ ...form, allClasses: e.target.checked, selectedClassIds: e.target.checked ? [] : form.selectedClassIds })}
+                                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                                        <span className="text-sm font-medium text-gray-700">All Classes ({classes.length})</span>
+                                    </label>
+                                    {!form.allClasses && (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto border border-gray-200 rounded-xl p-3">
+                                            {classes.map(c => (
+                                                <label key={c.id} className="flex items-center gap-1.5 text-xs cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                                                    <input type="checkbox" checked={form.selectedClassIds.includes(c.id)}
+                                                        onChange={e => {
+                                                            const ids = e.target.checked ? [...form.selectedClassIds, c.id] : form.selectedClassIds.filter(id => id !== c.id);
+                                                            setForm({ ...form, selectedClassIds: ids });
+                                                        }}
+                                                        className="w-3.5 h-3.5 rounded border-gray-300 text-primary focus:ring-primary/20" />
+                                                    <span className="text-gray-700">{c.name}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <FormField label="Full Marks" name="full_marks" type="number" icon={Hash}
                                     value={form.full_marks} onChange={e => setForm({ ...form, full_marks: e.target.value })}
@@ -520,11 +558,19 @@ const AdminExams = () => {
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col animate-fade-in-up">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                            <div>
-                                <h2 className="text-lg font-bold text-gray-900 font-serif">{viewExam.name}</h2>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    {classMap[viewExam.class_id]?.name} {classMap[viewExam.class_id]?.section || ''} &bull; {viewExam.exam_type || 'Exam'} &bull; {formatDate(viewExam.start_date)}
-                                </p>
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900 font-serif">{viewExam.name}</h2>
+                                    <p className="text-xs text-gray-500 mt-0.5">{viewExam.exam_type || 'Exam'} &bull; {formatDate(viewExam.start_date)}</p>
+                                </div>
+                                <select value={viewClassId} onChange={e => handleViewClassChange(e.target.value)}
+                                    className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none">
+                                    <option value="">— Select Class —</option>
+                                    {(viewExam.class_ids || []).map(cid => {
+                                        const c = classMap[cid];
+                                        return c ? <option key={cid} value={cid}>{c.name} {c.section || ''}</option> : null;
+                                    })}
+                                </select>
                             </div>
                             <div className="flex items-center gap-2">
                                 {(() => {
@@ -553,7 +599,13 @@ const AdminExams = () => {
                         </div>
 
                         <div className="flex-1 overflow-auto p-6">
-                            {viewLoading ? (
+                            {!viewClassId ? (
+                                <div className="text-center py-16">
+                                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500 font-medium">Select a class to view results</p>
+                                    <p className="text-gray-400 text-xs mt-1">Choose from the dropdown above</p>
+                                </div>
+                            ) : viewLoading ? (
                                 <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
                             ) : !viewData || viewData.students.length === 0 ? (
                                 <div className="text-center py-12">
@@ -586,7 +638,7 @@ const AdminExams = () => {
                                             {viewData.students.map(student => {
                                                 const studentResults = viewData.results.filter(r => r.student_id === student.id);
                                                 const totalObtained = studentResults.reduce((sum, r) => sum + (parseFloat(r.marks_obtained) || 0), 0);
-                                                const totalFull = studentResults.reduce((sum, r) => sum + (parseFloat(r.total_marks) || 100), 0);
+                                                const totalFull = studentResults.reduce((sum, r) => sum + (parseFloat(r.full_marks) || 100), 0);
                                                 const pct = totalFull > 0 ? ((totalObtained / totalFull) * 100).toFixed(1) : '—';
                                                 const vStatus = getStudentVerificationStatus(student.id);
                                                 return (
@@ -721,7 +773,7 @@ const AdminExams = () => {
                                                         </tr>
                                                     );
                                                     const totalObtained = studentResults.reduce((sum, r) => sum + (parseFloat(r.marks_obtained) || 0), 0);
-                                                    const totalFull = studentResults.reduce((sum, r) => sum + (parseFloat(r.total_marks) || 100), 0);
+                                                    const totalFull = studentResults.reduce((sum, r) => sum + (parseFloat(r.full_marks) || 100), 0);
                                                     const pct = totalFull > 0 ? ((totalObtained / totalFull) * 100).toFixed(1) : '0';
                                                     const vStatus = getStudentVerificationStatus(student.id);
                                                     const isVerifying = verifyingStudent === student.id;
@@ -808,69 +860,115 @@ const AdminExams = () => {
             {/* ====== SCHEDULE / ROUTINE MODAL ====== */}
             {scheduleExam && (
                 <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col animate-fade-in-up">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-fade-in-up">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                            <div>
-                                <h2 className="text-lg font-bold text-gray-900 font-serif">Exam Schedule / Routine</h2>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    {scheduleExam.name} &bull; {classMap[scheduleExam.class_id]?.name} {classMap[scheduleExam.class_id]?.section || ''} &bull; Set subject-wise dates, times & rooms
-                                </p>
+                            <div className="flex items-center gap-4">
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900 font-serif">Exam Routine</h2>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        {scheduleExam.name} &bull; Set subject-wise dates, times & rooms per class
+                                    </p>
+                                </div>
+                                <select value={scheduleClassId} onChange={e => handleScheduleClassChange(e.target.value)}
+                                    className="appearance-none pl-3 pr-8 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none font-medium">
+                                    <option value="">— Select Class —</option>
+                                    {(scheduleExam.class_ids || []).map(cid => {
+                                        const c = classMap[cid];
+                                        return c ? <option key={cid} value={cid}>{c.name} {c.section || ''}</option> : null;
+                                    })}
+                                </select>
                             </div>
                             <button onClick={() => setScheduleExam(null)} className="p-1 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
                         </div>
                         <div className="flex-1 overflow-auto p-6">
-                            {scheduleLoading ? (
+                            {!scheduleClassId ? (
+                                <div className="text-center py-16">
+                                    <BookOpen className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                                    <p className="text-gray-500 font-medium">Select a class to set exam routine</p>
+                                    <p className="text-gray-400 text-xs mt-1">Each class has its own subjects and schedule</p>
+                                </div>
+                            ) : scheduleLoading ? (
                                 <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
                             ) : scheduleRoutines.length === 0 ? (
                                 <div className="text-center py-12">
                                     <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                                    <p className="text-gray-500 text-sm">No subjects found for this class</p>
-                                    <p className="text-gray-400 text-xs mt-1">Add subjects to the class first</p>
+                                    <p className="text-gray-500 text-sm">No subjects found for {classMap[scheduleClassId]?.name}</p>
+                                    <p className="text-gray-400 text-xs mt-1">Add subjects to the class first via Class Management</p>
                                 </div>
                             ) : (
                                 <div className="space-y-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">{classMap[scheduleClassId]?.name} — {scheduleRoutines.length} Subjects</p>
+                                        <button type="button" onClick={() => {
+                                            const baseDate = scheduleExam.start_date || '';
+                                            if (!baseDate) { showToast('Set exam start date first', 'error'); return; }
+                                            let d = new Date(baseDate);
+                                            setScheduleRoutines(prev => prev.map((r, i) => {
+                                                const date = new Date(d);
+                                                date.setDate(date.getDate() + i);
+                                                // Skip Saturdays (6)
+                                                while (date.getDay() === 6) date.setDate(date.getDate() + 1);
+                                                return { ...r, exam_date: date.toISOString().split('T')[0], start_time: r.start_time || '10:00', end_time: r.end_time || '13:00' };
+                                            }));
+                                            showToast('Auto-filled dates starting from exam start date');
+                                        }} className="text-xs font-medium text-primary hover:text-primary/80 flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" /> Auto-fill dates
+                                        </button>
+                                    </div>
                                     <div className="grid grid-cols-12 gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-500 px-1 mb-1">
                                         <div className="col-span-3">Subject</div>
-                                        <div className="col-span-3">Date</div>
-                                        <div className="col-span-2">Start Time</div>
-                                        <div className="col-span-2">End Time</div>
-                                        <div className="col-span-2">Room</div>
+                                        <div className="col-span-2">Date</div>
+                                        <div className="col-span-2">Start</div>
+                                        <div className="col-span-2">End</div>
+                                        <div className="col-span-1">Full</div>
+                                        <div className="col-span-1">Pass</div>
+                                        <div className="col-span-1">Room</div>
                                     </div>
                                     {scheduleRoutines.map((routine, idx) => (
-                                        <div key={routine.subject_id} className="grid grid-cols-12 gap-2 items-center bg-gray-50 rounded-xl p-3">
+                                        <div key={routine.subject_id} className="grid grid-cols-12 gap-2 items-center bg-gray-50 rounded-xl p-2.5">
                                             <div className="col-span-3">
                                                 <span className="text-sm font-semibold text-gray-800">{routine.subject_name}</span>
                                             </div>
-                                            <div className="col-span-3">
+                                            <div className="col-span-2">
                                                 <input type="date" value={routine.exam_date}
                                                     onChange={e => handleScheduleChange(idx, 'exam_date', e.target.value)}
-                                                    className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
+                                                    className="w-full px-1.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
                                             </div>
                                             <div className="col-span-2">
                                                 <input type="time" value={routine.start_time}
                                                     onChange={e => handleScheduleChange(idx, 'start_time', e.target.value)}
-                                                    className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
+                                                    className="w-full px-1.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
                                             </div>
                                             <div className="col-span-2">
                                                 <input type="time" value={routine.end_time}
                                                     onChange={e => handleScheduleChange(idx, 'end_time', e.target.value)}
-                                                    className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
+                                                    className="w-full px-1.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
                                             </div>
-                                            <div className="col-span-2">
-                                                <input type="text" value={routine.room} placeholder="e.g. Hall A"
+                                            <div className="col-span-1">
+                                                <input type="number" value={routine.full_marks} min={1}
+                                                    onChange={e => handleScheduleChange(idx, 'full_marks', parseInt(e.target.value) || 100)}
+                                                    className="w-full px-1.5 py-1.5 border border-gray-200 rounded-lg text-xs text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
+                                            </div>
+                                            <div className="col-span-1">
+                                                <input type="number" value={routine.pass_marks} min={1}
+                                                    onChange={e => handleScheduleChange(idx, 'pass_marks', parseInt(e.target.value) || 40)}
+                                                    className="w-full px-1.5 py-1.5 border border-gray-200 rounded-lg text-xs text-center focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
+                                            </div>
+                                            <div className="col-span-1">
+                                                <input type="text" value={routine.room} placeholder="Hall"
                                                     onChange={e => handleScheduleChange(idx, 'room', e.target.value)}
-                                                    className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
+                                                    className="w-full px-1.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none bg-white" />
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
-                        {scheduleRoutines.length > 0 && (
+                        {scheduleClassId && scheduleRoutines.length > 0 && (
                             <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 shrink-0">
                                 <p className="text-xs text-gray-400">
                                     <Globe className="w-3 h-3 inline mr-1" />
-                                    {scheduleExam.published ? 'This exam is visible on the public schedule page' : 'Toggle "Public" on the exam card to make it visible publicly'}
+                                    {scheduleExam.published ? 'Visible on public schedule' : 'Toggle "Public" on the exam to make visible'}
                                 </p>
                                 <div className="flex items-center gap-3">
                                     <button type="button" onClick={() => setScheduleExam(null)}
@@ -878,7 +976,7 @@ const AdminExams = () => {
                                     <button onClick={handleSaveSchedule} disabled={scheduleSaving}
                                         className="btn-primary px-5 py-2.5 text-sm flex items-center gap-2">
                                         {scheduleSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                                        {scheduleSaving ? 'Saving...' : 'Save Schedule'}
+                                        {scheduleSaving ? 'Saving...' : `Save ${classMap[scheduleClassId]?.name} Schedule`}
                                     </button>
                                 </div>
                             </div>

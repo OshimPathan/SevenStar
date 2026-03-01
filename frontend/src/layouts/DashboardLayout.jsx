@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ErrorBoundary from '../components/ErrorBoundary';
 import {
     LayoutDashboard, Users, BookOpen, GraduationCap,
     Calendar, FileText, LogOut, Menu, X,
@@ -68,6 +69,8 @@ const Breadcrumb = () => {
         'manage-exams': 'Manage Exams',
         'manage-fees': 'Fee Management',
         'manage-attendance': 'Manage Attendance',
+        'mark-entry': 'Mark Entry',
+        'admin-results': 'Results & Report Cards',
         'class-analytics': 'Class Analytics',
         'class-browser': 'Class Browser',
         'manage-reviews': 'Reviews',
@@ -121,6 +124,8 @@ const getPageTitle = (pathname, role) => {
         'manage-gallery': 'Gallery',
         'manage-programs': 'Programs & Syllabus',
         'manage-attendance': 'Manage Attendance',
+        'mark-entry': 'Mark Entry',
+        'admin-results': 'Results & Report Cards',
         'class-analytics': 'Class Analytics',
         'class-browser': 'Class Browser',
         library: 'Library',
@@ -145,8 +150,8 @@ const DashboardLayout = () => {
 
     const role = user?.role || 'STUDENT';
 
-    const handleLogout = () => {
-        logout();
+    const handleLogout = async () => {
+        await logout();
         navigate('/login');
     };
 
@@ -231,10 +236,12 @@ const DashboardLayout = () => {
                 {(role === 'ADMIN' || role === 'TEACHER') && (
                     <>
                         <div className="sidebar-section-label">Academics</div>
-                        <SidebarLink to="/dashboard/manage-attendance" icon={<ClipboardCheck className="w-[18px] h-[18px]" />} label="Manage Attendance" onClick={closeSidebar} />
+                        {role === 'ADMIN' && <SidebarLink to="/dashboard/manage-attendance" icon={<ClipboardCheck className="w-[18px] h-[18px]" />} label="Manage Attendance" onClick={closeSidebar} />}
                         <SidebarLink to="/dashboard/attendance" icon={<ClipboardCheck className="w-[18px] h-[18px]" />} label="Attendance" onClick={closeSidebar} />
                         <SidebarLink to="/dashboard/exams" icon={<FileText className="w-[18px] h-[18px]" />} label="Exams & Marks" onClick={closeSidebar} />
-                        <SidebarLink to="/dashboard/manage-exams" icon={<ClipboardList className="w-[18px] h-[18px]" />} label="Manage Exams" onClick={closeSidebar} />
+                        {role === 'ADMIN' && <SidebarLink to="/dashboard/mark-entry" icon={<ClipboardList className="w-[18px] h-[18px]" />} label="Mark Entry" onClick={closeSidebar} />}
+                        {role === 'ADMIN' && <SidebarLink to="/dashboard/admin-results" icon={<Award className="w-[18px] h-[18px]" />} label="Results & Reports" onClick={closeSidebar} />}
+                        {role === 'ADMIN' && <SidebarLink to="/dashboard/manage-exams" icon={<ClipboardList className="w-[18px] h-[18px]" />} label="Manage Exams" onClick={closeSidebar} />}
                     </>
                 )}
 
@@ -385,7 +392,9 @@ const DashboardLayout = () => {
 
                 {/* Page Content */}
                 <main className="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
-                    <Outlet />
+                    <ErrorBoundary>
+                        <Outlet />
+                    </ErrorBoundary>
                 </main>
             </div>
         </div>

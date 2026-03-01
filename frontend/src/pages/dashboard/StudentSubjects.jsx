@@ -10,7 +10,10 @@ const StudentSubjects = () => {
 
     useEffect(() => {
         if (!user?.student_id) return;
-        getStudentSubjects(user.student_id).then(setSubjects).finally(() => setLoading(false));
+        getStudentSubjects(user.student_id)
+            .then(data => setSubjects(Array.isArray(data) ? data : data?.subjects || []))
+            .catch(() => setSubjects([]))
+            .finally(() => setLoading(false));
     }, [user?.student_id]);
 
     if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;

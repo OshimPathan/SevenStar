@@ -72,12 +72,17 @@ const AdminTeachers = () => {
     useEffect(() => {
         const init = async () => {
             setLoading(true);
-            const data = await getTeachers({ search: '' });
-            const list = data.teachers || [];
-            setTeachers(list);
-            setLoading(false);
-            // Fetch loads in background
-            fetchAllTeacherLoads(list);
+            try {
+                const data = await getTeachers({ search: '' });
+                const list = data?.teachers || [];
+                setTeachers(list);
+                setLoading(false);
+                fetchAllTeacherLoads(list);
+            } catch (e) {
+                console.error('Failed to load teachers:', e);
+                setTeachers([]);
+                setLoading(false);
+            }
         };
         init();
     }, []);
@@ -490,8 +495,8 @@ const AdminTeachers = () => {
 
             {/* Add/Edit Modal — Detailed Form */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { setShowModal(false); resetForm(); }}>
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4" onClick={() => { setShowModal(false); resetForm(); }}>
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[95vw] sm:max-w-lg md:max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-bold text-gray-900">{editingTeacher ? 'Edit Teacher' : 'Add New Teacher'}</h3>
@@ -557,8 +562,8 @@ const AdminTeachers = () => {
 
                                 <FormField label="Password" name="password"
                                     value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
-                                    placeholder={editingTeacher ? "Leave blank to keep current" : "Default: teacher123"}
-                                    helper={editingTeacher ? "Enter new password to reset" : "Leave blank to use default password"} />
+                                    placeholder={editingTeacher ? "Leave blank to keep current" : "Min 8 characters (auto-generated if blank)"}
+                                    helper={editingTeacher ? "Enter new password to reset" : "Leave blank to auto-generate a secure password"} />
 
                                 {/* Contact & Qualifications */}
                                 <div className="border-t border-gray-100 pt-4">

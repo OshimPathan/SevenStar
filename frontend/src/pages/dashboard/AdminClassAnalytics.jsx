@@ -15,13 +15,13 @@ const AdminClassAnalytics = () => {
 
     useEffect(() => {
         Promise.all([getAllClasses(), getExams()]).then(([clsRes, exRes]) => {
-            const cls = clsRes.classes || [];
-            const ex = exRes.exams || [];
+            const cls = clsRes?.classes || [];
+            const ex = exRes?.exams || [];
             setClasses(cls);
             setExams(ex);
             if (cls.length > 0) setSelectedClass(cls[0].id);
             if (ex.length > 0) setSelectedExam(ex[0].id);
-        });
+        }).catch(e => console.error('Failed to load analytics data:', e));
     }, []);
 
     useEffect(() => {

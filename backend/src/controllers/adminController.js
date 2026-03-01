@@ -1,19 +1,28 @@
+import bcrypt from 'bcrypt';
+import { query } from '../db.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
+const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS || '10');
+
 // Utility: Audit log entry
 const logAudit = async ({ userId, action, table, recordId, description, oldData, newData, req }) => {
     try {
         await query(
-            `INSERT INTO audit_logs (user_id, action, table_name, record_id, description, ip_address, user_agent, old_data, new_data)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            `INSERT INTO audit_logs (user_id, action, table_name, record_id, details)
+             VALUES ($1, $2, $3, $4, $5)`,
             [
                 userId,
                 action,
                 table,
                 recordId,
-                description || null,
-                req?.ip || null,
-                req?.headers['user-agent'] || null,
-                oldData ? JSON.stringify(oldData) : null,
-                newData ? JSON.stringify(newData) : null
+                JSON.stringify({
+                    description: description || null,
+                    ip_address: req?.ip || null,
+                    user_agent: req?.headers?.['user-agent'] || null,
+                    old_data: oldData || null,
+                    new_data: newData || null
+                })
             ]
         );
     } catch (e) {
@@ -24,11 +33,14 @@ const logAudit = async ({ userId, action, table, recordId, description, oldData,
 export const getExamRoutines = async (req, res) => {
     try {
         const { exam_id } = req.query;
-        let sql = `SELECT er.*, s.name as subject_name FROM exam_routines er JOIN subjects s ON er.subject_id = s.id`;
+        let sql = `SELECT er.*, s.name as subject_name
+            FROM exam_routines er
+            JOIN subjects s ON er.subject_id = s.id
+            JOIN exam_classes ec ON er.exam_class_id = ec.id`;
         const params = [];
         if (exam_id) {
             params.push(exam_id);
-            sql += ' WHERE er.exam_id = $1';
+            sql += ' WHERE ec.exam_id = $1';
         }
         sql += ' ORDER BY er.exam_date, er.start_time';
         const result = await query(sql, params);
@@ -42,18 +54,23 @@ export const getExamRoutines = async (req, res) => {
 export const saveExamRoutine = async (req, res) => {
     try {
         const { exam_id, subject_id, exam_date, start_time, end_time, room } = req.body;
+        // Find the exam_class record for this exam
+        const ecResult = await query('SELECT id FROM exam_classes WHERE exam_id = $1 LIMIT 1', [exam_id]);
+        if (ecResult.rows.length === 0) return res.status(400).json({ error: 'No exam_classes record found for this exam' });
+        const examClassId = ecResult.rows[0].id;
+
         // Upsert logic
-        const existing = await query('SELECT id FROM exam_routines WHERE exam_id = $1 AND subject_id = $2', [exam_id, subject_id]);
+        const existing = await query('SELECT id FROM exam_routines WHERE exam_class_id = $1 AND subject_id = $2', [examClassId, subject_id]);
         let result;
         if (existing.rows.length > 0) {
             result = await query(
-                'UPDATE exam_routines SET exam_date = $1, start_time = $2, end_time = $3, room = $4 WHERE id = $5 RETURNING *',
+                'UPDATE exam_routines SET exam_date = $1, start_time = $2, end_time = $3, room_number = $4 WHERE id = $5 RETURNING *',
                 [exam_date, start_time, end_time, room, existing.rows[0].id]
             );
         } else {
             result = await query(
-                'INSERT INTO exam_routines (exam_id, subject_id, exam_date, start_time, end_time, room) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-                [exam_id, subject_id, exam_date, start_time, end_time, room]
+                'INSERT INTO exam_routines (exam_class_id, subject_id, exam_date, start_time, end_time, room_number) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+                [examClassId, subject_id, exam_date, start_time, end_time, room]
             );
         }
         res.status(201).json({ routine: result.rows[0] });
@@ -100,7 +117,7 @@ export const publishResults = async (req, res) => {
 export const verifyStudentMarks = async (req, res) => {
     try {
         const { result_id } = req.body;
-        await query('UPDATE results SET verified = TRUE, verified_by = $1, verified_at = NOW() WHERE id = $2', [req.user.id, result_id]);
+        await query('UPDATE exam_marks SET verified = TRUE, verified_by = $1 WHERE id = $2', [req.user.id, result_id]);
         res.json({ message: 'Result verified' });
     } catch (error) {
         console.error('Error verifying result:', error);
@@ -111,46 +128,43 @@ export const verifyStudentMarks = async (req, res) => {
 export const unverifyStudentMarks = async (req, res) => {
     try {
         const { result_id } = req.body;
-        await query('UPDATE results SET verified = FALSE, verified_by = NULL, verified_at = NULL WHERE id = $1', [result_id]);
+        await query('UPDATE exam_marks SET verified = FALSE, verified_by = NULL WHERE id = $1', [result_id]);
         res.json({ message: 'Result unverified' });
     } catch (error) {
         console.error('Error unverifying result:', error);
         res.status(500).json({ error: 'Internal Server Error' });
     }
 };
-import bcrypt from 'bcrypt';
-import { query } from '../db.js';
-import dotenv from 'dotenv';
-
-dotenv.config();
-const SALT_ROUNDS = parseInt(process.env.SALT_ROUNDS || '10');
-
 // ── Dashboard Stats ──
 export const getDashboardStats = async (req, res) => {
     try {
-        const studentsCount = await query('SELECT COUNT(*) FROM students');
-        const teachersCount = await query('SELECT COUNT(*) FROM teachers');
-        const classesCount = await query('SELECT COUNT(*) FROM classes');
-        const parentsCount = await query("SELECT COUNT(*) FROM users WHERE role = 'PARENT'");
-        const pendingFees = await query("SELECT COUNT(*) FROM fees WHERE status = 'UNPAID'");
-        const notices = await query('SELECT * FROM notices ORDER BY created_at DESC LIMIT 5');
+        const studentsCount = await query('SELECT COUNT(*) FROM students WHERE is_deleted IS NOT TRUE');
+        const teachersCount = await query("SELECT COUNT(*) FROM staff WHERE staff_type = 'Teaching' AND is_deleted IS NOT TRUE");
+        const classesCount = await query('SELECT COUNT(*) FROM classes WHERE is_deleted IS NOT TRUE');
+        const parentsCount = await query("SELECT COUNT(*) FROM users WHERE role = 'PARENT' AND is_deleted IS NOT TRUE");
+        const pendingFees = await query("SELECT COUNT(*) FROM student_fees WHERE status != 'Paid'");
+        const notices = await query('SELECT * FROM notices WHERE is_active = true ORDER BY created_at DESC LIMIT 5');
         const events = await query('SELECT * FROM events ORDER BY start_date ASC LIMIT 5');
 
         const attendanceStats = await query(`
-            SELECT date, 
-                   COUNT(*) FILTER (WHERE status = 'PRESENT') as present,
-                   COUNT(*) FILTER (WHERE status = 'ABSENT') as absent,
-                   COUNT(*) FILTER (WHERE status = 'LATE') as late,
+            SELECT attendance_date as date, 
+                   COUNT(*) FILTER (WHERE status = 'Present') as present,
+                   COUNT(*) FILTER (WHERE status = 'Absent') as absent,
+                   COUNT(*) FILTER (WHERE status = 'Late') as late,
                    COUNT(*) as total
             FROM attendance
-            WHERE date >= CURRENT_DATE - INTERVAL '7 days'
-            GROUP BY date ORDER BY date ASC
+            WHERE attendance_date >= CURRENT_DATE - INTERVAL '7 days'
+            GROUP BY attendance_date ORDER BY attendance_date ASC
         `);
 
         const recentStudents = await query(`
-            SELECT s.id, s.admission_number, u.name, c.name as class_name, c.section
-            FROM students s JOIN users u ON s.user_id = u.id
-            LEFT JOIN classes c ON s.class_id = c.id
+            SELECT s.id, s.admission_number, u.name,
+                   c.name as class_name
+            FROM students s
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN enrollments e ON e.student_id = s.id
+            LEFT JOIN classes c ON e.class_id = c.id
+            WHERE s.is_deleted IS NOT TRUE
             ORDER BY s.created_at DESC LIMIT 5
         `);
 
@@ -177,7 +191,7 @@ export const getDashboardStats = async (req, res) => {
 export const getAllUsers = async (req, res) => {
     try {
         const { role, search } = req.query;
-        let sql = 'SELECT id, name, email, role, created_at FROM users';
+        let sql = 'SELECT id, name, email, role, created_at FROM users WHERE is_deleted IS NOT TRUE';
         const params = [];
         const conditions = [];
 
@@ -190,7 +204,7 @@ export const getAllUsers = async (req, res) => {
             conditions.push(`(name ILIKE $${params.length} OR email ILIKE $${params.length})`);
         }
 
-        if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
+        if (conditions.length > 0) sql += ' AND ' + conditions.join(' AND ');
         sql += ' ORDER BY created_at DESC';
 
         const result = await query(sql, params);
@@ -206,12 +220,17 @@ export const getStudents = async (req, res) => {
     try {
         const { search, classId } = req.query;
         let sql = `
-            SELECT s.id, s.admission_number, s.roll_number, s.parent_name, s.parent_phone,
-                   s.parent_email, s.parent_user_id, s.date_of_birth, s.blood_group, s.address, s.class_id,
-                   u.id as user_id, u.name, u.email, c.name as class_name, c.section
+            SELECT s.id, s.admission_number, s.father_name as parent_name, s.father_phone as parent_phone,
+                   s.parent_user_id, s.date_of_birth, s.blood_group, s.address,
+                   u.id as user_id, u.name, u.email,
+                   e.class_id, e.roll_number, e.section_id,
+                   c.name as class_name, sec.name as section
             FROM students s
             JOIN users u ON s.user_id = u.id
-            LEFT JOIN classes c ON s.class_id = c.id
+            LEFT JOIN enrollments e ON e.student_id = s.id
+            LEFT JOIN classes c ON e.class_id = c.id
+            LEFT JOIN sections sec ON e.section_id = sec.id
+            WHERE s.is_deleted IS NOT TRUE
         `;
         const params = [];
         const conditions = [];
@@ -222,11 +241,11 @@ export const getStudents = async (req, res) => {
         }
         if (classId) {
             params.push(classId);
-            conditions.push(`s.class_id = $${params.length}`);
+            conditions.push(`e.class_id = $${params.length}`);
         }
 
-        if (conditions.length > 0) sql += ' WHERE ' + conditions.join(' AND ');
-        sql += ' ORDER BY c.name, s.roll_number';
+        if (conditions.length > 0) sql += ' AND ' + conditions.join(' AND ');
+        sql += ' ORDER BY c.name, e.roll_number';
 
         const result = await query(sql, params);
         res.json({ students: result.rows });
@@ -241,7 +260,7 @@ export const createStudent = async (req, res) => {
         const {
             name, email, password, class_id, roll_number, date_of_birth,
             blood_group, address, parent_name, parent_phone, parent_email,
-            create_parent_account
+            create_parent_account, gender
         } = req.body;
 
         const passwordHash = await bcrypt.hash(password || 'student123', SALT_ROUNDS);
@@ -276,10 +295,26 @@ export const createStudent = async (req, res) => {
         }
 
         const studentResult = await query(
-            `INSERT INTO students (user_id, admission_number, class_id, roll_number, date_of_birth, blood_group, address, parent_name, parent_phone, parent_email, parent_user_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
-            [userId, admNo, class_id || null, roll_number || null, date_of_birth || null, blood_group || null, address || null, parent_name, parent_phone, parent_email || null, parentUserId]
+            `INSERT INTO students (user_id, admission_number, first_name, last_name, date_of_birth, gender, blood_group, address, father_name, father_phone, parent_user_id, status)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, 'Active') RETURNING *`,
+            [userId, admNo, (name || 'Unknown').split(' ')[0], (name || '').split(' ').slice(1).join(' ') || '.', date_of_birth || null, gender || null, blood_group || null, address || null, parent_name || null, parent_phone || null, parentUserId]
         );
+
+        // Create enrollment if class_id provided
+        if (class_id) {
+            const ayResult = await query("SELECT id FROM academic_years WHERE is_active = true LIMIT 1");
+            const academicYearId = ayResult.rows[0]?.id;
+            if (academicYearId) {
+                const secResult = await query('SELECT id FROM sections WHERE class_id = $1 LIMIT 1', [class_id]);
+                const sectionId = secResult.rows[0]?.id;
+                if (sectionId) {
+                    await query(
+                        'INSERT INTO enrollments (student_id, academic_year_id, class_id, section_id, roll_number) VALUES ($1, $2, $3, $4, $5)',
+                        [studentResult.rows[0].id, academicYearId, class_id, sectionId, roll_number ? parseInt(roll_number) : null]
+                    );
+                }
+            }
+        }
 
         res.status(201).json({
             message: 'Student created successfully',
@@ -299,7 +334,7 @@ export const createStudent = async (req, res) => {
 export const updateStudent = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, email, class_id, roll_number, date_of_birth, blood_group, address, parent_name, parent_phone, parent_email } = req.body;
+        const { name, email, class_id, roll_number, date_of_birth, blood_group, address, parent_name, parent_phone } = req.body;
 
         const studentResult = await query('SELECT * FROM students WHERE id = $1', [id]);
         if (studentResult.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
@@ -315,14 +350,56 @@ export const updateStudent = async (req, res) => {
             await query(`UPDATE users SET ${sets.join(', ')} WHERE id = $${vals.length}`, vals);
         }
 
-        await query(
-            `UPDATE students SET class_id = COALESCE($1, class_id), roll_number = COALESCE($2, roll_number),
-             date_of_birth = COALESCE($3, date_of_birth), blood_group = COALESCE($4, blood_group),
-             address = COALESCE($5, address), parent_name = COALESCE($6, parent_name),
-             parent_phone = COALESCE($7, parent_phone), parent_email = COALESCE($8, parent_email)
-             WHERE id = $9`,
-            [class_id || null, roll_number || null, date_of_birth || null, blood_group || null, address || null, parent_name || null, parent_phone || null, parent_email || null, id]
-        );
+        // Update student profile fields
+        const studentUpdate = {};
+        if (name) {
+            studentUpdate.first_name = name.split(' ')[0];
+            studentUpdate.last_name = name.split(' ').slice(1).join(' ') || '.';
+        }
+        if (date_of_birth !== undefined) studentUpdate.date_of_birth = date_of_birth || null;
+        if (blood_group !== undefined) studentUpdate.blood_group = blood_group || null;
+        if (address !== undefined) studentUpdate.address = address || null;
+        if (parent_name !== undefined) studentUpdate.father_name = parent_name || null;
+        if (parent_phone !== undefined) studentUpdate.father_phone = parent_phone || null;
+
+        if (Object.keys(studentUpdate).length > 0) {
+            const sets = [];
+            const vals = [];
+            for (const [key, val] of Object.entries(studentUpdate)) {
+                vals.push(val);
+                sets.push(`${key} = $${vals.length}`);
+            }
+            vals.push(id);
+            await query(`UPDATE students SET ${sets.join(', ')} WHERE id = $${vals.length}`, vals);
+        }
+
+        // Update enrollment if class_id or roll_number changed
+        if (class_id || roll_number !== undefined) {
+            const ayResult = await query("SELECT id FROM academic_years WHERE is_active = true LIMIT 1");
+            const academicYearId = ayResult.rows[0]?.id;
+            if (academicYearId) {
+                const enrResult = await query('SELECT id FROM enrollments WHERE student_id = $1 AND academic_year_id = $2', [id, academicYearId]);
+                if (enrResult.rows.length > 0) {
+                    const enrUpdate = {};
+                    if (class_id) {
+                        enrUpdate.class_id = class_id;
+                        const secResult = await query('SELECT id FROM sections WHERE class_id = $1 LIMIT 1', [class_id]);
+                        if (secResult.rows[0]) enrUpdate.section_id = secResult.rows[0].id;
+                    }
+                    if (roll_number !== undefined) enrUpdate.roll_number = roll_number ? parseInt(roll_number) : null;
+                    if (Object.keys(enrUpdate).length > 0) {
+                        const sets = [];
+                        const vals = [];
+                        for (const [key, val] of Object.entries(enrUpdate)) {
+                            vals.push(val);
+                            sets.push(`${key} = $${vals.length}`);
+                        }
+                        vals.push(enrResult.rows[0].id);
+                        await query(`UPDATE enrollments SET ${sets.join(', ')} WHERE id = $${vals.length}`, vals);
+                    }
+                }
+            }
+        }
 
         // Fetch new data for audit
         const newStudentResult = await query('SELECT * FROM students WHERE id = $1', [id]);
@@ -353,8 +430,8 @@ export const deleteStudent = async (req, res) => {
         const studentResult = await query('SELECT user_id FROM students WHERE id = $1', [id]);
         if (studentResult.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
 
-        await query('DELETE FROM students WHERE id = $1', [id]);
-        await query('DELETE FROM users WHERE id = $1', [studentResult.rows[0].user_id]);
+        await query('UPDATE students SET is_deleted = true, deleted_at = NOW() WHERE id = $1', [id]);
+        await query('UPDATE users SET is_deleted = true, deleted_at = NOW() WHERE id = $1', [studentResult.rows[0].user_id]);
         res.json({ message: 'Student deleted' });
     } catch (error) {
         console.error('Error deleting student:', error);
@@ -362,27 +439,24 @@ export const deleteStudent = async (req, res) => {
     }
 };
 
-// ── Teachers CRUD ──
+// ── Teachers CRUD (staff table) ──
 export const getTeachers = async (req, res) => {
     try {
         const { search } = req.query;
         let sql = `
-            SELECT t.id, t.employee_id, t.phone, t.qualification, t.joined_date, t.address,
-                   u.name, u.email,
-                   COALESCE(array_agg(DISTINCT sub.name) FILTER (WHERE sub.name IS NOT NULL), '{}') as subjects,
-                   COALESCE(array_agg(DISTINCT c.name || ' ' || COALESCE(c.section,'')) FILTER (WHERE c.name IS NOT NULL), '{}') as classes
-            FROM teachers t
+            SELECT t.id, t.employee_id, t.contact_phone as phone, t.qualification,
+                   t.hire_date as joined_date, t.address,
+                   u.name, u.email
+            FROM staff t
             JOIN users u ON t.user_id = u.id
-            LEFT JOIN teacher_subjects ts ON t.id = ts.teacher_id
-            LEFT JOIN subjects sub ON ts.subject_id = sub.id
-            LEFT JOIN classes c ON sub.class_id = c.id
+            WHERE t.staff_type = 'Teaching' AND t.is_deleted IS NOT TRUE
         `;
         const params = [];
         if (search) {
             params.push(`%${search}%`);
-            sql += ` WHERE u.name ILIKE $1 OR t.employee_id ILIKE $1 OR u.email ILIKE $1`;
+            sql += ` AND (u.name ILIKE $1 OR t.employee_id ILIKE $1 OR u.email ILIKE $1)`;
         }
-        sql += ' GROUP BY t.id, u.name, u.email ORDER BY u.name';
+        sql += ' ORDER BY u.name';
 
         const result = await query(sql, params);
         res.json({ teachers: result.rows });
@@ -402,12 +476,16 @@ export const createTeacher = async (req, res) => {
             [name, email, passwordHash, 'TEACHER']
         );
 
-        const countResult = await query('SELECT COUNT(*) FROM teachers');
+        const countResult = await query("SELECT COUNT(*) FROM staff WHERE staff_type = 'Teaching'");
         const empId = `EMP${String(parseInt(countResult.rows[0].count) + 1).padStart(3, '0')}`;
+        const nameParts = (name || '').split(' ');
+        const firstName = nameParts[0] || 'Unknown';
+        const lastName = nameParts.slice(1).join(' ') || '.';
 
         const teacherResult = await query(
-            'INSERT INTO teachers (user_id, employee_id, phone, address, qualification, joined_date) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [userResult.rows[0].id, empId, phone || null, address || null, qualification || null, joined_date || new Date()]
+            `INSERT INTO staff (user_id, employee_id, first_name, last_name, staff_type, designation, qualification, hire_date, contact_phone, address)
+             VALUES ($1, $2, $3, $4, 'Teaching', 'Teacher', $5, $6, $7, $8) RETURNING *`,
+            [userResult.rows[0].id, empId, firstName, lastName, qualification || null, joined_date || new Date().toISOString().split('T')[0], phone || null, address || null]
         );
 
         res.status(201).json({
@@ -427,7 +505,7 @@ export const updateTeacher = async (req, res) => {
         const { id } = req.params;
         const { name, email, phone, qualification, address, joined_date } = req.body;
 
-        const teacherResult = await query('SELECT user_id FROM teachers WHERE id = $1', [id]);
+        const teacherResult = await query('SELECT user_id FROM staff WHERE id = $1', [id]);
         if (teacherResult.rows.length === 0) return res.status(404).json({ error: 'Teacher not found' });
 
         const userId = teacherResult.rows[0].user_id;
@@ -442,11 +520,17 @@ export const updateTeacher = async (req, res) => {
         }
 
         await query(
-            `UPDATE teachers SET phone = COALESCE($1, phone), qualification = COALESCE($2, qualification),
-             address = COALESCE($3, address), joined_date = COALESCE($4, joined_date)
+            `UPDATE staff SET contact_phone = COALESCE($1, contact_phone), qualification = COALESCE($2, qualification),
+             address = COALESCE($3, address), hire_date = COALESCE($4, hire_date)
              WHERE id = $5`,
             [phone || null, qualification || null, address || null, joined_date || null, id]
         );
+
+        if (name) {
+            const nameParts = name.split(' ');
+            await query('UPDATE staff SET first_name = $1, last_name = $2 WHERE id = $3',
+                [nameParts[0], nameParts.slice(1).join(' ') || '.', id]);
+        }
 
         res.json({ message: 'Teacher updated successfully' });
     } catch (error) {
@@ -459,11 +543,12 @@ export const updateTeacher = async (req, res) => {
 export const deleteTeacher = async (req, res) => {
     try {
         const { id } = req.params;
-        const teacherResult = await query('SELECT user_id FROM teachers WHERE id = $1', [id]);
+        const teacherResult = await query('SELECT user_id FROM staff WHERE id = $1', [id]);
         if (teacherResult.rows.length === 0) return res.status(404).json({ error: 'Teacher not found' });
 
-        await query('DELETE FROM teachers WHERE id = $1', [id]);
-        await query('DELETE FROM users WHERE id = $1', [teacherResult.rows[0].user_id]);
+        // Soft delete
+        await query('UPDATE staff SET is_deleted = true, deleted_at = NOW() WHERE id = $1', [id]);
+        await query('UPDATE users SET is_deleted = true, deleted_at = NOW() WHERE id = $1', [teacherResult.rows[0].user_id]);
         res.json({ message: 'Teacher deleted' });
     } catch (error) {
         console.error('Error deleting teacher:', error);
@@ -483,7 +568,6 @@ export const getParents = async (req, res) => {
                                'id', s.id,
                                'name', su.name,
                                'class_name', c.name,
-                               'section', c.section,
                                'admission_number', s.admission_number
                            )
                        ) FILTER (WHERE s.id IS NOT NULL),
@@ -492,8 +576,9 @@ export const getParents = async (req, res) => {
             FROM users u
             LEFT JOIN students s ON s.parent_user_id = u.id
             LEFT JOIN users su ON s.user_id = su.id
-            LEFT JOIN classes c ON s.class_id = c.id
-            WHERE u.role = 'PARENT'
+            LEFT JOIN enrollments e ON e.student_id = s.id
+            LEFT JOIN classes c ON e.class_id = c.id
+            WHERE u.role = 'PARENT' AND u.is_deleted IS NOT TRUE
         `;
         const params = [];
         if (search) {
@@ -523,8 +608,8 @@ export const createParent = async (req, res) => {
 
         if (student_ids && student_ids.length > 0) {
             for (const sid of student_ids) {
-                await query('UPDATE students SET parent_user_id = $1, parent_name = COALESCE(parent_name, $2), parent_email = COALESCE(parent_email, $3) WHERE id = $4',
-                    [parentId, name, email, sid]);
+                await query('UPDATE students SET parent_user_id = $1 WHERE id = $2',
+                    [parentId, sid]);
             }
         }
 
@@ -544,7 +629,7 @@ export const deleteParent = async (req, res) => {
     try {
         const { id } = req.params;
         await query('UPDATE students SET parent_user_id = NULL WHERE parent_user_id = $1', [id]);
-        await query('DELETE FROM users WHERE id = $1', [id]);
+        await query('UPDATE users SET is_deleted = true, deleted_at = NOW() WHERE id = $1', [id]);
         res.json({ message: 'Parent deleted' });
     } catch (error) {
         console.error('Error deleting parent:', error);
@@ -570,13 +655,14 @@ export const resetUserPassword = async (req, res) => {
 export const getClasses = async (req, res) => {
     try {
         const result = await query(`
-            SELECT c.*, 
-                   COUNT(DISTINCT s.id) as student_count,
-                   COUNT(DISTINCT sub.id) as subject_count
+            SELECT c.*,
+                   COUNT(DISTINCT e.student_id) as student_count,
+                   COUNT(DISTINCT cs.subject_id) as subject_count
             FROM classes c
-            LEFT JOIN students s ON s.class_id = c.id
-            LEFT JOIN subjects sub ON sub.class_id = c.id
-            GROUP BY c.id ORDER BY c.name, c.section
+            LEFT JOIN enrollments e ON e.class_id = c.id
+            LEFT JOIN class_subjects cs ON cs.class_id = c.id
+            WHERE c.is_deleted IS NOT TRUE
+            GROUP BY c.id ORDER BY c.name
         `);
         res.json({ classes: result.rows });
     } catch (error) {
@@ -588,10 +674,25 @@ export const getClasses = async (req, res) => {
 export const createClass = async (req, res) => {
     try {
         const { name, section, stream } = req.body;
+        // Get or create stream
+        let streamId = null;
+        if (stream) {
+            let streamResult = await query('SELECT id FROM streams WHERE name = $1', [stream]);
+            if (streamResult.rows.length === 0) {
+                streamResult = await query('INSERT INTO streams (name) VALUES ($1) RETURNING id', [stream]);
+            }
+            streamId = streamResult.rows[0].id;
+        }
+
         const result = await query(
-            'INSERT INTO classes (name, section, stream) VALUES ($1, $2, $3) RETURNING *',
-            [name, section, stream]
+            'INSERT INTO classes (name, level, stream_id) VALUES ($1, $2, $3) RETURNING *',
+            [name, 1, streamId]
         );
+        const classId = result.rows[0].id;
+
+        // Create default section
+        await query('INSERT INTO sections (class_id, name) VALUES ($1, $2)', [classId, section || 'A']);
+
         res.status(201).json({ message: 'Class created', class: result.rows[0] });
     } catch (error) {
         console.error('Error creating class:', error);
@@ -602,7 +703,7 @@ export const createClass = async (req, res) => {
 export const deleteClass = async (req, res) => {
     try {
         const { id } = req.params;
-        await query('DELETE FROM classes WHERE id = $1', [id]);
+        await query('UPDATE classes SET is_deleted = true, deleted_at = NOW() WHERE id = $1', [id]);
         res.json({ message: 'Class deleted' });
     } catch (error) {
         console.error('Error deleting class:', error);
@@ -613,11 +714,7 @@ export const deleteClass = async (req, res) => {
 // ── Notices CRUD ──
 export const getNotices = async (req, res) => {
     try {
-        const result = await query(`
-            SELECT n.*, u.name as author_name
-            FROM notices n LEFT JOIN users u ON n.created_by = u.id
-            ORDER BY n.created_at DESC
-        `);
+        const result = await query('SELECT * FROM notices ORDER BY created_at DESC');
         res.json({ notices: result.rows });
     } catch (error) {
         console.error('Error fetching notices:', error);
@@ -627,10 +724,10 @@ export const getNotices = async (req, res) => {
 
 export const createNotice = async (req, res) => {
     try {
-        const { title, content, target_role } = req.body;
+        const { title, content } = req.body;
         const result = await query(
-            'INSERT INTO notices (title, content, target_role, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
-            [title, content, target_role || 'ALL', req.user.id]
+            'INSERT INTO notices (title, content, is_active) VALUES ($1, $2, true) RETURNING *',
+            [title, content]
         );
         res.status(201).json({ message: 'Notice created', notice: result.rows[0] });
     } catch (error) {
@@ -664,12 +761,14 @@ export const getEvents = async (req, res) => {
 export const getAllFees = async (req, res) => {
     try {
         const result = await query(`
-            SELECT f.*, u.name as student_name, c.name as class_name
-            FROM fees f
-            JOIN students s ON f.student_id = s.id
+            SELECT sf.id, sf.due_date, sf.amount_due, sf.amount_paid, sf.status,
+                   u.name as student_name, c.name as class_name
+            FROM student_fees sf
+            JOIN enrollments e ON sf.enrollment_id = e.id
+            JOIN students s ON e.student_id = s.id
             JOIN users u ON s.user_id = u.id
-            LEFT JOIN classes c ON s.class_id = c.id
-            ORDER BY f.due_date DESC
+            LEFT JOIN classes c ON e.class_id = c.id
+            ORDER BY sf.due_date DESC
         `);
         res.json({ fees: result.rows });
     } catch (error) {
@@ -684,27 +783,38 @@ export const getAttendanceForAdmin = async (req, res) => {
         const { class_id, date } = req.query;
         if (!class_id || !date) return res.status(400).json({ error: 'class_id and date are required' });
 
-        const result = await query(`
-            SELECT a.id, a.student_id, a.class_id, a.date, a.status, a.marked_by, a.created_at,
-                   u.name as student_name, s.roll_number, s.admission_number,
-                   mu.name as marked_by_name
-            FROM attendance a
-            JOIN students s ON a.student_id = s.id
+        // Get active academic year
+        const ayResult = await query("SELECT id FROM academic_years WHERE is_active = true LIMIT 1");
+        const academicYearId = ayResult.rows[0]?.id;
+        if (!academicYearId) return res.json({ attendance: [], students: [] });
+
+        // Get enrollments for the class
+        const enrollResult = await query(`
+            SELECT e.id as enrollment_id, e.student_id, e.roll_number,
+                   u.name as student_name, s.admission_number
+            FROM enrollments e
+            JOIN students s ON e.student_id = s.id
             JOIN users u ON s.user_id = u.id
-            LEFT JOIN users mu ON a.marked_by = mu.id
-            WHERE a.class_id = $1 AND a.date = $2
-            ORDER BY s.roll_number
-        `, [class_id, date]);
+            WHERE e.class_id = $1 AND e.academic_year_id = $2
+            ORDER BY e.roll_number
+        `, [class_id, academicYearId]);
 
-        // Also get all students in this class (to show who hasn't been marked)
-        const allStudents = await query(`
-            SELECT s.id, s.roll_number, s.admission_number, u.name
-            FROM students s JOIN users u ON s.user_id = u.id
-            WHERE s.class_id = $1
-            ORDER BY s.roll_number
-        `, [class_id]);
+        const enrollIds = enrollResult.rows.map(e => e.enrollment_id);
 
-        res.json({ attendance: result.rows, students: allStudents.rows });
+        // Get attendance for these enrollments on the date
+        let attendance = [];
+        if (enrollIds.length > 0) {
+            const attResult = await query(`
+                SELECT a.id, a.enrollment_id, a.attendance_date, a.status, a.marked_by,
+                       st.first_name || ' ' || st.last_name as marked_by_name
+                FROM attendance a
+                LEFT JOIN staff st ON a.marked_by = st.id
+                WHERE a.enrollment_id = ANY($1) AND a.attendance_date = $2
+            `, [enrollIds, date]);
+            attendance = attResult.rows;
+        }
+
+        res.json({ attendance, students: enrollResult.rows });
     } catch (error) {
         console.error('Error fetching admin attendance:', error);
         res.status(500).json({ error: 'Internal Server Error' });
@@ -716,13 +826,30 @@ export const updateAttendance = async (req, res) => {
         const { date, attendance } = req.body; // attendance: [{ student_id, class_id, status }]
         const markedBy = req.user.id;
 
-        // Admin can update attendance for ANY date (bypasses auto-lock)
+        // Get active academic year
+        const ayResult = await query("SELECT id FROM academic_years WHERE is_active = true LIMIT 1");
+        const academicYearId = ayResult.rows[0]?.id;
+        if (!academicYearId) return res.status(400).json({ error: 'No active academic year' });
+
+        // Get staff_id for marked_by
+        const staffResult = await query('SELECT id FROM staff WHERE user_id = $1', [markedBy]);
+        const staffId = staffResult.rows[0]?.id || null;
+
         for (const record of attendance) {
+            // Find enrollment_id
+            const enrResult = await query(
+                'SELECT id FROM enrollments WHERE student_id = $1 AND class_id = $2 AND academic_year_id = $3',
+                [record.student_id, record.class_id, academicYearId]
+            );
+            if (enrResult.rows.length === 0) continue;
+            const enrollmentId = enrResult.rows[0].id;
+
             await query(
-                `INSERT INTO attendance (student_id, class_id, date, status, marked_by)
-                 VALUES ($1, $2, $3, $4, $5)
-                 ON CONFLICT (student_id, date) DO UPDATE SET status = $4, marked_by = $5`,
-                [record.student_id, record.class_id, date, record.status, markedBy]
+                `INSERT INTO attendance (enrollment_id, attendance_date, status, marked_by)
+                 VALUES ($1, $2, $3, $4)
+                 ON CONFLICT (enrollment_id, attendance_date, subject_id)
+                 DO UPDATE SET status = $3, marked_by = $4`,
+                [enrollmentId, date, record.status, staffId]
             );
         }
 

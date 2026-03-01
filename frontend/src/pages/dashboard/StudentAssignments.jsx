@@ -11,7 +11,7 @@ const StudentAssignments = () => {
 
     useEffect(() => {
         if (!user?.student_id) return;
-        getAssignmentsForStudent(user.student_id).then(setData).finally(() => setLoading(false));
+        getAssignmentsForStudent(user.student_id).then(d => setData(d || { assignments: [], submissions: [] })).catch(() => setData({ assignments: [], submissions: [] })).finally(() => setLoading(false));
     }, [user?.student_id]);
 
     const subMap = useMemo(() => Object.fromEntries((data.submissions || []).map(s => [s.assignment_id, s])), [data.submissions]);
@@ -74,8 +74,9 @@ const StudentAssignments = () => {
                             {sub && (
                                 <div className="mt-3 text-xs text-gray-500">
                                     <p>Submitted: {new Date(sub.submitted_at).toLocaleString()}</p>
-                                    {sub.marks != null && <p>Marks: {sub.marks}/{sub.total_marks || 0}</p>}
-                                    {sub.file_url && <a href={sub.file_url} target="_blank" rel="noreferrer" className="text-primary font-semibold">View file</a>}
+                                    {sub.grade != null && <p>Grade: {sub.grade}</p>}
+                                    {sub.feedback && <p>Feedback: {sub.feedback}</p>}
+                                    {sub.attachment_url && <a href={sub.attachment_url} target="_blank" rel="noreferrer" className="text-primary font-semibold">View file</a>}
                                 </div>
                             )}
                         </div>

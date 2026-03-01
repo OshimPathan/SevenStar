@@ -16,7 +16,7 @@ const AdminInventory = () => {
     const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
     const load = async () => {
         setLoading(true);
-        try { const res = await getInventoryItems({ search }); setItems(res.items); } catch (e) { showToast(e.message, 'error'); }
+        try { const res = await getInventoryItems({ search }); setItems(res?.items || []); } catch (e) { showToast(e.message, 'error'); }
         setLoading(false);
     };
     useEffect(() => { load(); }, []);

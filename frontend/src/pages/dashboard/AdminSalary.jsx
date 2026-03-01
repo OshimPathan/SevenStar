@@ -18,7 +18,7 @@ const AdminSalary = () => {
         setLoading(true);
         try {
             const [pRes, sRes] = await Promise.all([getSalaryPayments({ month }), getTeachers()]);
-            setPayments(pRes.payments); setStaff(sRes.teachers || []);
+            setPayments(pRes?.payments || []); setStaff(sRes?.teachers || []);
         } catch (e) { showToast(e.message, 'error'); }
         setLoading(false);
     };

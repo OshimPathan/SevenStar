@@ -36,7 +36,7 @@ const AdminTimetable = () => {
         setLoading(true);
         try {
             const [res, subRes] = await Promise.all([getTimetableForClass(classId, sectionId), getSubjectsByClass(classId)]);
-            setSlots(res.slots); setSubjects(subRes.subjects || []);
+            setSlots(res?.slots || []); setSubjects(subRes?.subjects || []);
         } catch (e) { showToast(e.message, 'error'); }
         setLoading(false);
     };

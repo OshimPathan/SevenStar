@@ -11,8 +11,11 @@ const StudentRoutine = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        if (!user?.class_id || !user?.section) return;
-        getClassRoutine(user.class_id, user.section_id || user.section).then(setRoutine).finally(() => setLoading(false));
+        if (!user?.class_id) { setLoading(false); return; }
+        getClassRoutine(user.class_id, user.section_id || user.section)
+            .then(data => setRoutine(Array.isArray(data) ? data : []))
+            .catch(() => setRoutine([]))
+            .finally(() => setLoading(false));
     }, [user?.class_id, user?.section_id, user?.section]);
 
     const grouped = useMemo(() => {

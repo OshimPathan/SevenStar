@@ -15,8 +15,7 @@ const ROLES = [
         btnBg: 'bg-blue-500 hover:bg-blue-600',
         icon: GraduationCap,
         emoji: '🎓',
-        demoEmail: 'aarav.sharma@sevenstar.edu.np',
-        demoPass: 'password123',
+        canRegister: true,
     },
     {
         id: 'TEACHER',
@@ -28,8 +27,7 @@ const ROLES = [
         btnBg: 'bg-green-500 hover:bg-green-600',
         icon: Users,
         emoji: '👨‍🏫',
-        demoEmail: 'suman.adhikari@sevenstar.edu.np',
-        demoPass: 'password123',
+        canRegister: false,
     },
     {
         id: 'PARENT',
@@ -41,8 +39,7 @@ const ROLES = [
         btnBg: 'bg-orange-500 hover:bg-orange-600',
         icon: UserCheck,
         emoji: '👪',
-        demoEmail: 'hari.sharma@gmail.com',
-        demoPass: 'password123',
+        canRegister: true,
     },
     {
         id: 'ADMIN',
@@ -54,8 +51,7 @@ const ROLES = [
         btnBg: 'bg-red-500 hover:bg-red-600',
         icon: Shield,
         emoji: '🛡️',
-        demoEmail: 'admin@sevenstar.edu.np',
-        demoPass: 'admin123',
+        canRegister: false,
     },
 ];
 
@@ -264,7 +260,7 @@ const Login = () => {
                                     </div>
                                 </div>
 
-                                {/* Toggle Switch */}
+                                {/* Toggle Switch — only show Create Account for roles that allow registration */}
                                 <div className="flex p-1 bg-white/60 rounded-xl border border-black/5">
                                     <button
                                         onClick={() => { if (!isLoginMode) toggleMode(); }}
@@ -272,12 +268,14 @@ const Login = () => {
                                     >
                                         Sign In
                                     </button>
+                                    {role.canRegister && (
                                     <button
                                         onClick={() => { if (isLoginMode) toggleMode(); }}
                                         className={`flex-1 py-1.5 text-sm font-bold rounded-lg transition-all ${!isLoginMode ? 'bg-white shadow border border-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
                                     >
                                         Create Account
                                     </button>
+                                    )}
                                 </div>
                             </div>
 
@@ -397,18 +395,6 @@ const Login = () => {
                                         )}
                                     </button>
                                 </form>
-
-                                {/* Demo Credentials Section */}
-                                {isLoginMode && (
-                                    <div className="mt-6 pt-5 border-t border-gray-100">
-                                        <button
-                                            onClick={() => { setEmail(role.demoEmail); setPassword(role.demoPass); }}
-                                            className={`w-full py-2.5 rounded-xl text-xs font-semibold ${role.bg} ${role.text} ${role.hoverBg} transition-colors border border-transparent hover:border-current`}
-                                        >
-                                            ⚡ Use Demo {role.label} Credentials
-                                        </button>
-                                    </div>
-                                )}
                             </div>
                         </div>
                     </div>

@@ -14,10 +14,10 @@ const FloatingActions = () => {
     const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
     return (
-        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3">
+        <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-2 sm:gap-3">
             {/* Quick Contact Popup */}
             {showQuickContact && (
-                <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 w-[calc(100vw-3rem)] sm:w-72 animate-fade-in-up mb-2">
+                <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-4 sm:p-5 w-[calc(100vw-2rem)] sm:w-72 animate-fade-in-up mb-1 sm:mb-2 max-h-[70vh] overflow-y-auto">
                     <div className="flex items-center justify-between mb-4">
                         <h4 className="font-bold text-gray-900 text-sm font-serif">Quick Contact</h4>
                         <button onClick={() => setShowQuickContact(false)} className="text-gray-400 hover:text-gray-600">
@@ -62,15 +62,15 @@ const FloatingActions = () => {
             {/* Scroll to Top */}
             {showScrollTop && (
                 <button onClick={scrollToTop}
-                    className="w-11 h-11 rounded-full bg-primary text-white shadow-lg hover:bg-primary-dark transition-all hover:scale-110 flex items-center justify-center animate-fade-in">
-                    <ArrowUp className="w-5 h-5" />
+                    className="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-primary text-white shadow-lg hover:bg-primary-dark transition-all hover:scale-110 flex items-center justify-center animate-fade-in">
+                    <ArrowUp className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
             )}
 
             {/* WhatsApp FAB */}
             <button
                 onClick={() => setShowQuickContact(!showQuickContact)}
-                className="w-14 h-14 rounded-full bg-green-500 text-white shadow-lg hover:bg-green-600 transition-all hover:scale-110 flex items-center justify-center relative group">
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-green-500 text-white shadow-lg hover:bg-green-600 transition-all hover:scale-110 flex items-center justify-center relative group">
                 {showQuickContact ? <X className="w-6 h-6" /> : <MessageCircle className="w-6 h-6" />}
                 {!showQuickContact && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full animate-ping opacity-75" />

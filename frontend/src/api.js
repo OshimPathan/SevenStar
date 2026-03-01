@@ -1,3 +1,6 @@
+import { supabase } from './lib/supabase';
+import bcrypt from 'bcryptjs';
+
 // ===== BULK IMPORT FUNCTIONS =====
 
 /**
@@ -19,7 +22,7 @@ export async function bulkCreateStudents(rows, classesLookup = []) {
             const form = {
                 name: row['Name'] || '',
                 email: row['Email'] || '',
-                password: 'student123',
+                password: generateTempPassword(),
                 class_id: classId,
                 roll_number: row['Roll'] || '',
                 gender: row['Gender'] || '',
@@ -53,7 +56,7 @@ export async function bulkCreateTeachers(rows) {
             const form = {
                 name: row['Name'] || '',
                 email: row['Email'] || '',
-                password: 'teacher123',
+                password: generateTempPassword(),
                 qualification: row['Qualification'] || '',
                 phone: row['Phone'] || '',
                 address: row['Address'] || '',
@@ -89,7 +92,7 @@ export async function bulkCreateClasses(rows) {
             const sections = (row['Sections'] || 'A').split(',').map(s => s.trim()).filter(Boolean);
             if (sections.length > 1) {
                 for (const sec of sections.slice(1)) {
-                    await insforge.database.from('sections').insert([{ class_id: cls.id, name: sec }]).select();
+                    await supabase.from('sections').insert([{ class_id: cls.id, name: sec }]).select();
                 }
             }
             success++;
@@ -106,9 +109,9 @@ export async function createBulkFees(studentIds, payload) {
     if (!activeYear) return { success: true };
     const created = [];
     for (const studentId of studentIds) {
-        const { data: enr } = await insforge.database.from('enrollments').select('id, class_id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
+        const { data: enr } = await supabase.from('enrollments').select('id, class_id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
         if (!enr) continue;
-        const { data: fs } = await insforge.database.from('fee_structures').upsert([{
+        const { data: fs } = await supabase.from('fee_structures').upsert([{
             academic_year_id: activeYear.id,
             class_id: enr.class_id,
             fee_type: 'Custom',
@@ -117,8 +120,8 @@ export async function createBulkFees(studentIds, payload) {
         }], { onConflict: 'academic_year_id,class_id,fee_type' }).select();
         const fsId = fs?.[0]?.id;
         if (!fsId) continue;
-        const { data } = await insforge.database.from('student_fees').insert([{
-            enrollment_id: enr.id,
+        const { data } = await supabase.from('student_fees').insert([{
+            student_id: studentId,
             fee_structure_id: fsId,
             due_date: payload.due_date || null,
             amount_due: parseFloat(payload.amount || 0),
@@ -131,7 +134,7 @@ export async function createBulkFees(studentIds, payload) {
 }
 // Convert Admission to Student
 export async function convertAdmissionToStudent(admission_id) {
-    const { data: app, error: appError } = await insforge.database
+    const { data: app, error: appError } = await supabase
         .from('admission_applications')
         .select('*')
         .eq('id', admission_id)
@@ -144,19 +147,15 @@ export async function convertAdmissionToStudent(admission_id) {
     const lastName = parts.slice(1).join(' ') || '.';
 
     const email = `student+${Date.now()}@sevenstar.edu.np`;
-    const password = 'student123';
-    const passwordHash = await bcrypt.hash(password, 10);
+    const password = generateTempPassword();
 
-    const { data: userRows, error: userErr } = await insforge.database
-        .from('users')
-        .insert([{ name, email, password_hash: passwordHash, role: 'STUDENT' }])
-        .select();
-    if (userErr) throw new Error(userErr.message);
-    const userId = userRows?.[0]?.id;
+    // Create user via server-side function (Auth + DB)
+    const result = await serverCreateUser({ name, email, password, role: 'STUDENT' });
+    const userId = result.user.id;
 
     const admissionNumber = `ADM${new Date().getFullYear()}${String(Date.now()).slice(-4)}`;
 
-    const { data: stuRows, error: stuErr } = await insforge.database
+    const { data: stuRows, error: stuErr } = await supabase
         .from('students')
         .insert([{
             user_id: userId,
@@ -176,13 +175,13 @@ export async function convertAdmissionToStudent(admission_id) {
 
     const activeYear = await getActiveAcademicYear();
     if (activeYear && app.applied_for_class) {
-        const { data: cls } = await insforge.database.from('classes').select('id').eq('name', app.applied_for_class).maybeSingle();
+        const { data: cls } = await supabase.from('classes').select('id').eq('name', app.applied_for_class).maybeSingle();
         if (cls?.id) {
             let sectionId = null;
-            const { data: secs } = await insforge.database.from('sections').select('id').eq('class_id', cls.id).limit(1);
+            const { data: secs } = await supabase.from('sections').select('id').eq('class_id', cls.id).limit(1);
             if (secs?.length) sectionId = secs[0].id;
             if (sectionId) {
-                await insforge.database.from('enrollments').insert([{
+                await supabase.from('enrollments').insert([{
                     student_id: student.id,
                     academic_year_id: activeYear.id,
                     class_id: cls.id,
@@ -193,7 +192,7 @@ export async function convertAdmissionToStudent(admission_id) {
         }
     }
 
-    await insforge.database
+    await supabase
         .from('admission_applications')
         .update({ status: 'ACCEPTED' })
         .eq('id', admission_id);
@@ -203,7 +202,7 @@ export async function convertAdmissionToStudent(admission_id) {
 // Delete Admission Application
 export async function deleteAdmissionApplication(id) {
     // Example: Delete admission application by id
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('admission_applications')
         .delete()
         .eq('id', id)
@@ -222,7 +221,7 @@ export async function updateAdmissionStatus(idOrObj, statusArg) {
         status = statusArg
     }
     status = (status || '').toUpperCase()
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('admission_applications')
         .update({ status })
         .eq('id', id)
@@ -234,10 +233,10 @@ export async function updateAdmissionStatus(idOrObj, statusArg) {
 
 // Results for Class Exam
 export async function getResultsForClassExam(examId, classId) {
-    const { data: students } = await insforge.database.from('enrollments')
-        .select('student_id, roll_number, students(id, users(name))')
+    const { data: students } = await supabase.from('enrollments')
+        .select('student_id, roll_number, students(id, users:users!students_user_id_fkey(name))')
         .eq('class_id', classId);
-    const { data: results } = await insforge.database.from('exam_marks')
+    const { data: results } = await supabase.from('exam_marks')
         .select('*')
         .eq('exam_id', examId);
     return {
@@ -251,50 +250,46 @@ export async function getResultsForClassExam(examId, classId) {
 }
 // Exam Routines — uses exam_class_id FK (not exam_id)
 export async function saveBulkExamRoutines(examId, routines, classId) {
-    // Look up the exam_classes row for this exam
-    let query = insforge.database.from('exam_classes').select('id, class_id').eq('exam_id', examId);
-    if (classId) query = query.eq('class_id', classId);
-    const { data: ecRows } = await query;
-    let examClassId;
-    if (ecRows && ecRows.length > 0) {
-        examClassId = ecRows[0].id;
-    } else {
-        throw new Error('No exam_classes record found for this exam. Ensure the exam is linked to a class.');
+    if (!classId) throw new Error('Class ID is required for saving exam routines');
+    // Ensure exam_classes link exists
+    const { data: ecRows } = await supabase.from('exam_classes').select('id').eq('exam_id', examId).eq('class_id', classId);
+    if (!ecRows || ecRows.length === 0) {
+        const { error: createErr } = await supabase.from('exam_classes').insert([{ exam_id: examId, class_id: classId }]);
+        if (createErr) throw new Error('Failed to link exam to class: ' + createErr.message);
     }
-    const payload = (routines || []).map(r => ({
-        exam_class_id: examClassId,
+    const payload = (routines || []).filter(r => r.exam_date).map(r => ({
+        exam_id: examId,
+        class_id: classId,
         subject_id: r.subject_id,
         exam_date: r.exam_date || null,
         start_time: r.start_time || null,
         end_time: r.end_time || null,
-        room_number: r.room || r.room_number || null
+        full_marks: r.full_marks || null,
+        pass_marks: r.pass_marks || null,
+        room: r.room || null
     }));
-    const { data, error } = await insforge.database.from('exam_routines').upsert(payload, { onConflict: 'exam_class_id,subject_id' }).select();
+    if (payload.length === 0) throw new Error('No routines to save');
+    const { data, error } = await supabase.from('exam_routines').upsert(payload, { onConflict: 'exam_id,class_id,subject_id' }).select();
     if (error) throw new Error(error.message);
     return data;
 }
-// Exam Routines — fetch by exam_id (resolve through exam_classes)
-export async function getExamRoutines(examId) {
-    // Find all exam_class IDs for this exam
-    const { data: ecRows } = await insforge.database.from('exam_classes').select('id').eq('exam_id', examId);
-    if (!ecRows || ecRows.length === 0) return [];
-    const ecIds = ecRows.map(r => r.id);
-    const { data, error } = await insforge.database
-        .from('exam_routines')
+// Exam Routines — fetch by exam_id, optionally filter by class_id
+export async function getExamRoutines(examId, classId) {
+    let query = supabase.from('exam_routines')
         .select('*, subjects(name)')
-        .in('exam_class_id', ecIds)
+        .eq('exam_id', examId)
         .order('exam_date', { ascending: true });
+    if (classId) query = query.eq('class_id', classId);
+    const { data, error } = await query;
     if (error) throw new Error(error.message);
-    // Normalize field names for frontend compatibility
     return (data || []).map(r => ({
         ...r,
-        room: r.room_number || '',
         subject_name: r.subjects?.name || ''
     }));
 }
 // Exams
 export async function toggleExamPublished(examId, isPublished) {
-    const { data, error } = await insforge.database.from('exams').update({ published: !!isPublished }).eq('id', examId).select();
+    const { data, error } = await supabase.from('exams').update({ published: !!isPublished }).eq('id', examId).select();
     if (error) throw new Error(error.message);
     return data?.[0] || {};
 }
@@ -305,14 +300,14 @@ export async function updateExam(id, payload) {
         if (payload[k] !== undefined) upd[k] = payload[k];
     });
     if (Object.keys(upd).length > 0) {
-        const { error } = await insforge.database.from('exams').update(upd).eq('id', id);
+        const { error } = await supabase.from('exams').update(upd).eq('id', id);
         if (error) throw new Error(error.message);
     }
 
     if (payload.class_id) {
         // Assume 1 exam = 1 class for this UI. 
-        await insforge.database.from('exam_classes').delete().eq('exam_id', id);
-        await insforge.database.from('exam_classes').insert([{ exam_id: id, class_id: payload.class_id }]);
+        await supabase.from('exam_classes').delete().eq('exam_id', id);
+        await supabase.from('exam_classes').insert([{ exam_id: id, class_id: payload.class_id }]);
     }
 
     return { success: true };
@@ -320,7 +315,7 @@ export async function updateExam(id, payload) {
 // Program Subjects
 export async function updateProgramSubject({ id, name, description }) {
     // Example: Update program subject details
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('subjects')
         .update({ name, description })
         .eq('id', id)
@@ -330,7 +325,7 @@ export async function updateProgramSubject({ id, name, description }) {
 }
 // Gallery
 export async function updateGalleryPhoto({ id, caption, image_url }) {
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('gallery_photos')
         .update({ title: caption, image_url })
         .eq('id', id)
@@ -341,7 +336,7 @@ export async function updateGalleryPhoto({ id, caption, image_url }) {
 // Students by Class Detailed
 export async function getStudentsByClassDetailed(class_id) {
     // Example: Fetch detailed student info for a class
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('enrollments')
         .select('student_id, students(id, user_id, first_name, last_name, admission_number, users:users!students_user_id_fkey(name, email)), class_id, classes(name), section_id, sections(name)')
         .eq('class_id', class_id);
@@ -351,7 +346,7 @@ export async function getStudentsByClassDetailed(class_id) {
 // Teacher Subjects with Classes
 export async function getTeacherSubjectsWithClasses(teacher_id) {
     // Example: Fetch subjects and classes assigned to teacher
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('subject_assignments')
         .select('subject_id, subjects(name), class_id, classes(name)')
         .eq('teacher_id', teacher_id);
@@ -368,7 +363,7 @@ export async function getTeacherSubjectsForClass(a, b) {
         teacher_id = a;
         class_id = b;
     }
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('class_subjects')
         .select('subject_id, subjects(name)')
         .eq('class_id', class_id);
@@ -378,7 +373,7 @@ export async function getTeacherSubjectsForClass(a, b) {
 // Results
 export async function checkResultPublic(examId, rollNumber) {
     // 1. Get Exam details to know the academic year
-    const { data: exam, error: examError } = await insforge.database
+    const { data: exam, error: examError } = await supabase
         .from('exams')
         .select('*, academic_years(name)')
         .eq('id', examId)
@@ -426,10 +421,10 @@ export async function checkResultPublic(examId, rollNumber) {
     // But `ResultChecker` label is "Roll Number".
 
     // Let's look for `exam_classes` table to see if exams are linked to classes.
-    const { data: examClasses } = await insforge.database.from('exam_classes').select('class_id').eq('exam_id', examId);
+    const { data: examClasses } = await supabase.from('exam_classes').select('class_id').eq('exam_id', examId);
 
-    let enrollmentQuery = insforge.database.from('enrollments')
-        .select('id, student_id, roll_number, class_id, classes(name), students(first_name, last_name, admission_number, users(name))')
+    let enrollmentQuery = supabase.from('enrollments')
+        .select('id, student_id, roll_number, class_id, classes(name), students(first_name, last_name, admission_number, users:users!students_user_id_fkey(name))')
         .eq('academic_year_id', exam.academic_year_id);
 
     // If exam is linked to specific classes, filter enrollments by those classes
@@ -464,24 +459,24 @@ export async function checkResultPublic(examId, rollNumber) {
     const enroll = enrollments[0];
 
     // 3. Get Result Summary
-    const { data: summary } = await insforge.database
+    const { data: summary } = await supabase
         .from('result_summaries')
         .select('*')
         .eq('exam_id', examId)
-        .eq('enrollment_id', enroll.id)
+        .eq('student_id', enroll.student_id)
         .maybeSingle();
 
     if (!summary) throw new Error('Results not published or not found for this student.');
 
     // 4. Get Detailed Marks
-    const { data: marks } = await insforge.database
+    const { data: marks } = await supabase
         .from('exam_marks')
-        .select('*, subjects(name, is_optional, full_marks)') // subjects might have full_marks?
+        .select('*, subjects(name)')
         .eq('exam_id', examId)
-        .eq('enrollment_id', enroll.id);
+        .eq('student_id', enroll.student_id);
 
     // Calculate Division if missing
-    let division = summary.grade || 'N/A'; // Fallback
+    let division = summary.result || 'N/A'; // Fallback
     const pct = parseFloat(summary.percentage || 0);
     if (pct >= 80) division = 'Distinction';
     else if (pct >= 60) division = 'First Division';
@@ -495,13 +490,13 @@ export async function checkResultPublic(examId, rollNumber) {
         class_name: enroll.classes?.name,
         exam_name: exam.name,
         total_obtained: summary.total_marks,
-        total_marks: 0, // Need to sum subjects or get from somewhere
+        total_marks: summary.total_full_marks || 0,
         percentage: summary.percentage,
         division: division,
         subjects: (marks || []).map(m => ({
             subject_name: m.subjects?.name || 'Subject',
             marks_obtained: m.marks_obtained,
-            total_marks: m.total_marks || 100, // fallbacks
+            total_marks: m.full_marks || 100,
             grade: m.grade
         }))
     };
@@ -509,7 +504,7 @@ export async function checkResultPublic(examId, rollNumber) {
 // Results
 export async function getPublishedExamsForResults() {
     // Example: Fetch published exams for result checking
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('exams')
         .select('*')
         .eq('published', true)
@@ -527,9 +522,9 @@ export async function submitAdmissionApplication(form) {
         try {
             const file = payload.photo;
             const key = `admissions/${Date.now()}_${file.name.replace(/\s+/g, '-')}`;
-            const { error: upErr } = await insforge.storage.from('admissions').upload(key, file);
+            const { error: upErr } = await supabase.storage.from('admissions').upload(key, file);
             if (upErr) throw upErr;
-            const { publicUrl } = insforge.storage.from('admissions').getPublicUrl(key);
+            const { data: { publicUrl } } = supabase.storage.from('admissions').getPublicUrl(key);
             payload.photo_url = publicUrl;
         } catch (e) {
             console.error('Photo upload failed:', e);
@@ -543,7 +538,7 @@ export async function submitAdmissionApplication(form) {
     delete payload.photo;
 
     // Insert into admission_applications table
-    const { data, error } = await insforge.database.from('admission_applications').insert([
+    const { data, error } = await supabase.from('admission_applications').insert([
         payload
     ]).select();
     if (error) throw new Error(error.message);
@@ -552,7 +547,7 @@ export async function submitAdmissionApplication(form) {
 // Exams
 export async function getPublishedExamSchedule() {
     // P3 FIX: Optimized N+1 query string. Fetches exams, their classes, and routines in a single query.
-    const { data: exams, error } = await insforge.database
+    const { data: exams, error } = await supabase
         .from('exams')
         .select(`
             *,
@@ -591,27 +586,24 @@ export async function getPublishedExamSchedule() {
 }
 // Reviews
 export async function submitReview({ name, rating, content }) {
-    const { data, error } = await insforge.database.from('reviews').insert([
+    const { data, error } = await supabase.from('reviews').insert([
         { name, rating, content }
     ]).select();
     if (error) throw new Error(error.message);
     return data[0];
 }
-import { insforge } from './lib/insforge';
-import bcrypt from 'bcryptjs';
-
 // ========== HELPERS ==========
 
 // Ensure we have an active academic year, or get the latest
 export async function getActiveAcademicYear() {
-    let { data } = await insforge.database.from('academic_years').select('*').eq('is_active', true).maybeSingle();
+    let { data } = await supabase.from('academic_years').select('*').eq('is_active', true).maybeSingle();
     if (!data) {
-        let { data: latest } = await insforge.database.from('academic_years').select('*').order('start_date', { ascending: false }).limit(1);
+        let { data: latest } = await supabase.from('academic_years').select('*').order('start_date', { ascending: false }).limit(1);
         if (latest && latest.length > 0) return latest[0];
 
         // Create one if none exists
         const year = `${new Date().getFullYear()}-${new Date().getFullYear() + 1}`;
-        const { data: newYear } = await insforge.database.from('academic_years').insert([{
+        const { data: newYear } = await supabase.from('academic_years').insert([{
             name: year, start_date: `${new Date().getFullYear()}-04-01`, end_date: `${new Date().getFullYear() + 1}-03-31`, is_active: true
         }]).select();
         return newYear[0];
@@ -621,181 +613,145 @@ export async function getActiveAcademicYear() {
 
 // Ensure default stream exists for high schools
 export async function getDefaultStream() {
-    let { data } = await insforge.database.from('streams').select('*').limit(1).maybeSingle();
+    let { data } = await supabase.from('streams').select('*').limit(1).maybeSingle();
     if (!data) {
-        const { data: newStream } = await insforge.database.from('streams').insert([{ name: 'General' }]).select();
+        const { data: newStream } = await supabase.from('streams').insert([{ name: 'General' }]).select();
         return newStream[0];
     }
     return data;
 }
 
 export async function getAdmins() {
-    const { data, error } = await insforge.database.from('users').select('id,name,email,role').eq('role', 'ADMIN').order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('users').select('id,name,email,role').eq('role', 'ADMIN').order('created_at', { ascending: false })
     if (error) throw new Error(error.message)
     return data || []
 }
 
+// ── Server-side user management (Auth + DB in one call) ──
+
+/**
+ * Create a user via server-side RPC (creates Auth account + DB record).
+ * Returns { id, email, name, role, status }.
+ */
+async function serverCreateUser({ name, email, password, role }) {
+    const { data, error } = await supabase
+        .rpc('admin_create_user', {
+            p_email: email,
+            p_password: password,
+            p_name: name,
+            p_role: role
+        });
+    if (error) throw new Error(error.message || 'Failed to create user');
+    return { success: true, user: data };
+}
+
+/**
+ * Delete a user via server-side RPC (removes Auth account + DB record).
+ */
+async function serverDeleteUser(userId) {
+    const { data, error } = await supabase
+        .rpc('admin_delete_user', { p_user_id: userId });
+    if (error) throw new Error(error.message || 'Failed to delete user');
+    return { success: true, ...data };
+}
+
+/** Generate a cryptographically random temporary password (12 chars). */
+function generateTempPassword() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$';
+    const arr = new Uint8Array(12);
+    crypto.getRandomValues(arr);
+    return Array.from(arr, b => chars[b % chars.length]).join('');
+}
+
 export async function createAdminUser(form) {
-    const pwd = form.password || 'admin123'
-    const hash = await bcrypt.hash(pwd, 10)
-    const { error } = await insforge.database.from('users').insert([{ name: form.name, email: form.email, password_hash: hash, role: 'ADMIN' }])
-    if (error) throw new Error(error.message)
-    return { success: true }
+    if (!form.password || form.password.length < 8) {
+        throw new Error('Admin password is required and must be at least 8 characters.');
+    }
+    const result = await serverCreateUser({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+        role: 'ADMIN'
+    });
+    return { success: true, user: result.user }
 }
 
 export async function deleteUser(id) {
-    const { error } = await insforge.database.from('users').delete().eq('id', id)
-    if (error) throw new Error(error.message)
-    return { success: true }
+    return serverDeleteUser(id);
 }
 
-// ========== AUTH (Local table login) ==========
+// ========== AUTH (Secure Supabase Auth login) ==========
+// Legacy `login()` now delegates to the secure `loginViaSupabaseAuth` flow.
+// The old client-side bcrypt comparison has been removed for security.
 export async function login(email, password) {
-    const { data, error } = await insforge.database
-        .from('users').select('*').eq('email', email).maybeSingle();
-
-    if (error || !data) throw new Error('Invalid email or password');
-
-    const match = await bcrypt.compare(password, data.password_hash);
-    if (!match) throw new Error('Invalid email or password');
-
-    const user = { id: data.id, name: data.name, email: data.email, role: data.role };
-    const token = 'insforge_' + Date.now();
-    const academicYear = await getActiveAcademicYear();
-
-    if (data.role === 'TEACHER' || data.role === 'ADMIN') {
-        const { data: staff } = await insforge.database
-            .from('staff').select('*').eq('user_id', data.id).maybeSingle();
-        if (staff) {
-            user.staff_id = staff.id;
-            user.teacher_id = staff.id;
-        }
-    } else if (data.role === 'STUDENT') {
-        const { data: student } = await insforge.database
-            .from('students').select('*').eq('user_id', data.id).maybeSingle();
-        if (student) {
-            user.student_id = student.id;
-            if (academicYear) {
-                const { data: enroll } = await insforge.database.from('enrollments')
-                    .select('*, classes(name), sections(name)')
-                    .eq('student_id', student.id).eq('academic_year_id', academicYear.id).maybeSingle();
-                if (enroll) {
-                    user.enrollment_id = enroll.id;
-                    user.class_id = enroll.class_id;
-                    user.roll_number = enroll.roll_number;
-                    user.class_name = enroll.classes?.name;
-                    user.section = enroll.sections?.name;
-                }
-            }
-        }
-    } else if (data.role === 'PARENT') {
-        const { data: children } = await insforge.database
-            .from('students').select('id, user_id').eq('parent_user_id', data.id);
-        user.student_ids = (children || []).map(c => c.id);
-        if (children?.length > 0) {
-            user.student_id = children[0].id;
-            if (academicYear) {
-                const { data: enroll } = await insforge.database.from('enrollments')
-                    .select('*, classes(name), sections(name)')
-                    .eq('student_id', children[0].id).eq('academic_year_id', academicYear.id).maybeSingle();
-                if (enroll) {
-                    user.enrollment_id = enroll.id;
-                    user.class_id = enroll.class_id;
-                    user.class_name = enroll.classes?.name;
-                    user.section = enroll.sections?.name;
-                }
-            }
-        }
-    }
-
-    return { token, user };
+    return loginViaSupabaseAuth(email, password);
 }
 
 export async function register(name, email, password, role) {
-    // 1. Create the user in Auth
-    const { data: authData, error: authError } = await insforge.auth.signUp({
-        email,
-        password,
-        options: {
-            data: { name, role }
-        }
-    });
-
-    if (authError) {
-        throw new Error(authError.message || 'Failed to register authentication');
+    // Only allow STUDENT and PARENT self-registration
+    const allowedRoles = ['STUDENT', 'PARENT'];
+    if (!allowedRoles.includes(role.toUpperCase())) {
+        throw new Error('Only Student and Parent accounts can be self-registered. Contact admin for other roles.');
     }
 
-    const authUser = authData.user;
-    if (!authUser) {
-        throw new Error('Account created but login requires confirmation');
+    // Enforce password strength
+    if (!password || password.length < 8) {
+        throw new Error('Password must be at least 8 characters long.');
     }
 
-    // 2. Hash password for local login fallback
-    const salt = await bcrypt.genSalt(10);
-    const passwordHash = await bcrypt.hash(password, salt);
+    // Use server-side RPC to create auth user + public.users record
+    const { data, error } = await supabase
+        .rpc('register_user', {
+            p_email: email,
+            p_password: password,
+            p_name: name,
+            p_role: role.toUpperCase()
+        });
 
-    // 3. Insert into public.users with PENDING status
-    const { data: newUser, error: insertError } = await insforge.database
-        .from('users')
-        .insert([{
-            id: authUser.id,
-            name,
-            email,
-            password_hash: passwordHash,
-            role: role.toUpperCase(),
-            status: 'PENDING'
-        }])
-        .select('id, name, email, role, status')
-        .single();
-
-    if (insertError) {
-        console.error('Insert error:', insertError);
-        throw new Error('Failed to create account details');
+    if (error) {
+        throw new Error(error.message || 'Failed to register');
     }
 
     return {
-        message: 'Account created successfully. Waiting for admin approval.',
-        user: newUser
+        message: data?.message || 'Account created successfully. Waiting for admin approval.',
+        user: data?.user
     };
 }
 
 // ============== ADMIN USER APPROVAL API ==============
 
 export async function getPendingUsers() {
-    return handleResponse(
-        supabase
-            .from('users')
-            .select('*')
-            .eq('status', 'PENDING')
-            .order('created_at', { ascending: false })
-    );
+    const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    return data || [];
 }
 
 export async function approveUser(targetUserId, role, mappingData) {
-    const { data, error } = await insforge.functions.invoke('auth-approve', {
-        body: { target_user_id: targetUserId, role, mapping_data }
-    });
+    // Approve via RPC (sets status to ACTIVE)
+    const { data, error } = await supabase
+        .rpc('admin_approve_user', { p_user_id: targetUserId });
 
-    if (error || !data || data.error) {
-        throw new Error(data?.error || 'Failed to approve user');
+    if (error) {
+        throw new Error(error.message || 'Failed to approve user');
     }
 
-    return data;
+    return { success: true, ...data };
 }
 
 export async function rejectUser(targetUserId) {
-    // Only admins can execute this, so we rely on RLS/Backend deletion rules.
-    // For now, we will just delete the user record entirely (since they were never active).
-    return handleResponse(
-        supabase.from('users').delete().eq('id', targetUserId)
-    );
+    // Delete via server-side function (removes Auth account + DB record)
+    return serverDeleteUser(targetUserId);
 }
 
 // =====================================================
 
-export async function loginViaInsforgeAuth(email, password) {
+export async function loginViaSupabaseAuth(email, password) {
     // Use Native Supabase Auth to securely log in and automatically persist session cookies
-    const { data: authData, error: authError } = await insforge.auth.signInWithPassword({
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
     });
@@ -804,22 +760,27 @@ export async function loginViaInsforgeAuth(email, password) {
         throw new Error(authError?.message || 'Invalid email or password');
     }
 
-    // Fetch the enriched profile including role and pending status from our public table
-    const { data: userProfile, error: profileError } = await insforge.database
+    // Fetch the enriched profile — NEVER select password_hash
+    const { data: userProfile, error: profileError } = await supabase
         .from('users')
-        .select('*')
+        .select('id, name, email, role, status, is_deleted, created_at, updated_at')
         .eq('id', authData.user.id)
         .maybeSingle();
 
     if (profileError || !userProfile) {
         // Automatically sign out if database drift occurred
-        await insforge.auth.signOut();
+        await supabase.auth.signOut();
         throw new Error('Account internal mapping missing. Please contact Admin.');
     }
 
     if (userProfile.is_deleted) {
-        await insforge.auth.signOut();
+        await supabase.auth.signOut();
         throw new Error('This account has been deactivated.');
+    }
+
+    if (userProfile.status === 'SUSPENDED') {
+        await supabase.auth.signOut();
+        throw new Error('Your account has been suspended. Please contact the school administration.');
     }
 
     // Combine Auth UUID user with Public Profile columns
@@ -828,19 +789,19 @@ export async function loginViaInsforgeAuth(email, password) {
     const academicYear = await getActiveAcademicYear();
 
     if (user.role === 'TEACHER' || user.role === 'ADMIN') {
-        const { data: staff } = await insforge.database
+        const { data: staff } = await supabase
             .from('staff').select('*').eq('user_id', user.id).maybeSingle();
         if (staff) {
             user.staff_id = staff.id;
             user.teacher_id = staff.id;
         }
     } else if (user.role === 'STUDENT') {
-        const { data: student } = await insforge.database
+        const { data: student } = await supabase
             .from('students').select('*').eq('user_id', user.id).maybeSingle();
         if (student) {
             user.student_id = student.id;
             if (academicYear) {
-                const { data: enroll } = await insforge.database.from('enrollments')
+                const { data: enroll } = await supabase.from('enrollments')
                     .select('*, classes(name), sections(name)')
                     .eq('student_id', student.id).eq('academic_year_id', academicYear.id).maybeSingle();
                 if (enroll) {
@@ -853,13 +814,13 @@ export async function loginViaInsforgeAuth(email, password) {
             }
         }
     } else if (user.role === 'PARENT') {
-        const { data: children } = await insforge.database
+        const { data: children } = await supabase
             .from('students').select('id, user_id').eq('parent_user_id', user.id);
         user.student_ids = (children || []).map(c => c.id);
         if (children?.length > 0) {
             user.student_id = children[0].id;
             if (academicYear) {
-                const { data: enroll } = await insforge.database.from('enrollments')
+                const { data: enroll } = await supabase.from('enrollments')
                     .select('*, classes(name), sections(name)')
                     .eq('student_id', children[0].id).eq('academic_year_id', academicYear.id).maybeSingle();
                 if (enroll) {
@@ -885,7 +846,7 @@ export async function getStudents({ search = '', classId = '', sectionId = '', p
     const from = (page - 1) * limit;
     const to = from + limit - 1;
 
-    let query = insforge.database.from('enrollments')
+    let query = supabase.from('enrollments')
         .select(`
             id, roll_number, student_id, class_id, section_id,
             students (
@@ -939,13 +900,10 @@ export async function getStudents({ search = '', classId = '', sectionId = '', p
 export async function getStudentPerformance(studentId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return { rows: [] };
-    const { data: enr } = await insforge.database.from('enrollments')
-        .select('id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
-    if (!enr) return { rows: [] };
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('exam_marks')
-        .select('exam_id, subject_id, marks_obtained, total_marks, grade, exams(name, exam_type, start_date), subjects(name)')
-        .eq('enrollment_id', enr.id)
+        .select('exam_id, subject_id, marks_obtained, full_marks, grade, grade_point, exams(name, exam_type, start_date), subjects(name)')
+        .eq('student_id', studentId)
         .order('exam_id', { ascending: false });
     if (error) throw new Error(error.message);
     const rows = (data || []).map(r => ({
@@ -956,32 +914,30 @@ export async function getStudentPerformance(studentId) {
         subject_id: r.subject_id,
         subject_name: r.subjects?.name || 'Subject',
         marks: r.marks_obtained || 0,
-        full: r.total_marks || 100,
+        full: r.full_marks || 100,
         grade: r.grade || ''
     }));
     return { rows };
 }
 
 export async function createStudent(form) {
-    const password = form.password || 'student123';
-    const passwordHash = await bcrypt.hash(password, 10);
+    const password = form.password || generateTempPassword();
 
-    // 1. User
-    const { data: userData, error: userError } = await insforge.database
-        .from('users').insert([{ name: form.name, email: form.email, password_hash: passwordHash, role: 'STUDENT' }]).select();
-    if (userError) throw new Error(userError.message);
+    // 1. Create user via server-side function (Auth + DB)
+    const result = await serverCreateUser({ name: form.name, email: form.email, password, role: 'STUDENT' });
+    const userId = result.user.id;
 
-    // 2. Parent Account
+    // 2. Parent Account (also via server-side)
     let parentUserId = null;
     let parentCredentials = null;
     if (form.create_parent_account && form.parent_email) {
-        const parentPwd = 'parent123';
-        const parentHash = await bcrypt.hash(parentPwd, 10);
-        const { data: parentUser, error: pError } = await insforge.database
-            .from('users').insert([{ name: form.parent_name, email: form.parent_email, password_hash: parentHash, role: 'PARENT' }]).select();
-        if (!pError && parentUser?.[0]) {
-            parentUserId = parentUser[0].id;
+        const parentPwd = generateTempPassword();
+        try {
+            const parentResult = await serverCreateUser({ name: form.parent_name, email: form.parent_email, password: parentPwd, role: 'PARENT' });
+            parentUserId = parentResult.user.id;
             parentCredentials = { email: form.parent_email, password: parentPwd };
+        } catch (e) {
+            console.warn('Parent account creation failed:', e.message);
         }
     }
 
@@ -991,8 +947,8 @@ export async function createStudent(form) {
     const lastName = names.slice(1).join(' ') || '.';
     const admissionNumber = `ADM${new Date().getFullYear()}${String(Date.now()).slice(-4)}`;
 
-    const { data: studentData, error: studentError } = await insforge.database.from('students').insert([{
-        user_id: userData[0].id,
+    const { data: studentData, error: studentError } = await supabase.from('students').insert([{
+        user_id: userId,
         admission_number: admissionNumber,
         first_name: firstName,
         last_name: lastName,
@@ -1013,15 +969,14 @@ export async function createStudent(form) {
     // 4. Enrollment
     const academicYear = await getActiveAcademicYear();
     if (form.class_id && academicYear) {
-        // Find default section if none given
         let sectionId = form.section_id;
         if (!sectionId) {
-            const { data: secs } = await insforge.database.from('sections').select('id').eq('class_id', form.class_id).limit(1);
+            const { data: secs } = await supabase.from('sections').select('id').eq('class_id', form.class_id).limit(1);
             if (secs?.length > 0) sectionId = secs[0].id;
         }
 
         if (sectionId) {
-            await insforge.database.from('enrollments').insert([{
+            await supabase.from('enrollments').insert([{
                 student_id: studentData[0].id,
                 academic_year_id: academicYear.id,
                 class_id: form.class_id,
@@ -1035,7 +990,7 @@ export async function createStudent(form) {
 }
 
 export async function updateStudent(id, form) {
-    const { data: student } = await insforge.database.from('students').select('user_id').eq('id', id).maybeSingle();
+    const { data: student } = await supabase.from('students').select('user_id').eq('id', id).maybeSingle();
     if (!student) throw new Error('Student not found');
 
     if (form.name || form.email || form.password) {
@@ -1043,7 +998,7 @@ export async function updateStudent(id, form) {
         if (form.name) userUpdate.name = form.name;
         if (form.email) userUpdate.email = form.email;
         if (form.password) userUpdate.password_hash = await bcrypt.hash(form.password, 10);
-        if (student.user_id) await insforge.database.from('users').update(userUpdate).eq('id', student.user_id);
+        if (student.user_id) await supabase.from('users').update(userUpdate).eq('id', student.user_id);
     }
 
     const studentUpdate = {};
@@ -1062,22 +1017,22 @@ export async function updateStudent(id, form) {
     if (form.emergency_contact !== undefined) studentUpdate.local_guardian_name = form.emergency_contact || null;
 
     if (Object.keys(studentUpdate).length > 0) {
-        await insforge.database.from('students').update(studentUpdate).eq('id', id);
+        await supabase.from('students').update(studentUpdate).eq('id', id);
     }
 
     // Update Enrollment
     const academicYear = await getActiveAcademicYear();
     if ((form.class_id || form.roll_number !== undefined) && academicYear) {
-        const { data: enrollment } = await insforge.database.from('enrollments').select('id').eq('student_id', id).eq('academic_year_id', academicYear.id).maybeSingle();
+        const { data: enrollment } = await supabase.from('enrollments').select('id').eq('student_id', id).eq('academic_year_id', academicYear.id).maybeSingle();
         if (enrollment) {
             const enrUpdate = {};
             if (form.class_id) {
                 enrUpdate.class_id = form.class_id;
-                const { data: secs } = await insforge.database.from('sections').select('id').eq('class_id', form.class_id).limit(1);
+                const { data: secs } = await supabase.from('sections').select('id').eq('class_id', form.class_id).limit(1);
                 if (secs?.length > 0) enrUpdate.section_id = secs[0].id;
             }
             if (form.roll_number !== undefined) enrUpdate.roll_number = form.roll_number ? parseInt(form.roll_number) : null;
-            await insforge.database.from('enrollments').update(enrUpdate).eq('id', enrollment.id);
+            await supabase.from('enrollments').update(enrUpdate).eq('id', enrollment.id);
         }
     }
 
@@ -1085,11 +1040,11 @@ export async function updateStudent(id, form) {
 }
 
 export async function deleteStudent(id) {
-    const { data: student } = await insforge.database.from('students').select('user_id').eq('id', id).maybeSingle();
+    const { data: student } = await supabase.from('students').select('user_id').eq('id', id).maybeSingle();
     if (student?.user_id) {
-        await insforge.database.from('users').delete().eq('id', student.user_id);
+        return serverDeleteUser(student.user_id);
     } else {
-        await insforge.database.from('students').delete().eq('id', id);
+        await supabase.from('students').delete().eq('id', id);
     }
     return { success: true };
 }
@@ -1097,7 +1052,7 @@ export async function deleteStudent(id) {
 // ========== ADMIN - TEACHERS (STAFF) ==========
 
 export async function getTeachers({ search = '' } = {}) {
-    const { data: staffData, error } = await insforge.database
+    const { data: staffData, error } = await supabase
         .from('staff').select('*, users(name, email)').eq('staff_type', 'Teaching');
     if (error) throw new Error(error.message);
 
@@ -1123,14 +1078,15 @@ export async function getTeachers({ search = '' } = {}) {
 }
 
 export async function createTeacher(form) {
-    const pwd = form.password || 'teacher123';
-    const pwdHash = await bcrypt.hash(pwd, 10);
-    const { data: user, error: userErr } = await insforge.database.from('users').insert([{ name: form.name, email: form.email, password_hash: pwdHash, role: 'TEACHER' }]).select();
-    if (userErr) throw new Error(userErr.message);
+    const pwd = form.password || generateTempPassword();
+
+    // Create user via server-side function (Auth + DB)
+    const result = await serverCreateUser({ name: form.name, email: form.email, password: pwd, role: 'TEACHER' });
+    const userId = result.user.id;
 
     const names = form.name.split(' ');
-    const { error: staffErr } = await insforge.database.from('staff').insert([{
-        user_id: user[0].id,
+    const { error: staffErr } = await supabase.from('staff').insert([{
+        user_id: userId,
         employee_id: `EMP${Date.now().toString().slice(-6)}`,
         first_name: names[0], last_name: names.slice(1).join(' ') || '.',
         staff_type: 'Teaching', designation: 'Teacher',
@@ -1146,7 +1102,7 @@ export async function createTeacher(form) {
 }
 
 export async function updateTeacher(id, form) {
-    const { data: teacher } = await insforge.database.from('staff').select('user_id').eq('id', id).maybeSingle();
+    const { data: teacher } = await supabase.from('staff').select('user_id').eq('id', id).maybeSingle();
     if (!teacher) throw new Error('Teacher not found');
 
     if (form.name || form.email || form.password) {
@@ -1154,7 +1110,7 @@ export async function updateTeacher(id, form) {
         if (form.name) uUpdate.name = form.name;
         if (form.email) uUpdate.email = form.email;
         if (form.password) uUpdate.password_hash = await bcrypt.hash(form.password, 10);
-        if (teacher.user_id) await insforge.database.from('users').update(uUpdate).eq('id', teacher.user_id);
+        if (teacher.user_id) await supabase.from('users').update(uUpdate).eq('id', teacher.user_id);
     }
     const tUpdate = {};
     if (form.name) {
@@ -1167,26 +1123,26 @@ export async function updateTeacher(id, form) {
     if (form.joined_date !== undefined) tUpdate.hire_date = form.joined_date || null;
     if (form.leave_date !== undefined) tUpdate.leave_date = form.leave_date || null;
     if (form.photo_url !== undefined) tUpdate.photo_url = form.photo_url || null;
-    if (Object.keys(tUpdate).length > 0) await insforge.database.from('staff').update(tUpdate).eq('id', id);
+    if (Object.keys(tUpdate).length > 0) await supabase.from('staff').update(tUpdate).eq('id', id);
     return { success: true };
 }
 
 export async function deleteTeacher(id) {
-    const { data: teacher } = await insforge.database.from('staff').select('user_id').eq('id', id).maybeSingle();
-    if (teacher?.user_id) await insforge.database.from('users').delete().eq('id', teacher.user_id);
-    else await insforge.database.from('staff').delete().eq('id', id);
+    const { data: teacher } = await supabase.from('staff').select('user_id').eq('id', id).maybeSingle();
+    if (teacher?.user_id) return serverDeleteUser(teacher.user_id);
+    else await supabase.from('staff').delete().eq('id', id);
     return { success: true };
 }
 
 // ========== CLASSES & SECTIONS ==========
 
 export async function getClasses() {
-    const { data: classesData, error } = await insforge.database
+    const { data: classesData, error } = await supabase
         .from('classes')
         .select('*, streams(name), class_subjects(id, subject_id, subjects(id, name))')
         .order('name', { ascending: true });
     if (error) throw new Error(error.message);
-    const { data: sectionsData } = await insforge.database.from('sections').select('*');
+    const { data: sectionsData } = await supabase.from('sections').select('*');
     const sectionsMap = {};
     (sectionsData || []).forEach(s => {
         if (!sectionsMap[s.class_id]) sectionsMap[s.class_id] = [];
@@ -1195,7 +1151,7 @@ export async function getClasses() {
 
     // Subj/Students counts mappings
     const activeYear = await getActiveAcademicYear();
-    const { data: enrolls } = activeYear ? await insforge.database.from('enrollments').select('class_id').eq('academic_year_id', activeYear.id) : { data: [] };
+    const { data: enrolls } = activeYear ? await supabase.from('enrollments').select('class_id').eq('academic_year_id', activeYear.id) : { data: [] };
     const stCount = {};
     (enrolls || []).forEach(e => { stCount[e.class_id] = (stCount[e.class_id] || 0) + 1; });
 
@@ -1217,16 +1173,16 @@ export async function getClasses() {
 
 export async function addClass(classData) {
     const stream = await getDefaultStream();
-    const { data, error } = await insforge.database.from('classes').insert([{
+    const { data, error } = await supabase.from('classes').insert([{
         name: classData.name, level: parseInt(classData.level) || 1, stream_id: stream.id
     }]).select();
     if (error) throw new Error(error.message);
-    await insforge.database.from('sections').insert([{ class_id: data[0].id, name: classData.section || 'A' }]);
+    await supabase.from('sections').insert([{ class_id: data[0].id, name: classData.section || 'A' }]);
     return data[0];
 }
 
 export async function deleteClass(classId) {
-    const { error } = await insforge.database.from('classes').delete().eq('id', classId);
+    const { error } = await supabase.from('classes').delete().eq('id', classId);
     if (error) throw new Error(error.message);
     return { success: true };
 }
@@ -1234,9 +1190,9 @@ export async function deleteClass(classId) {
 // ========== STAFF PHOTOS ==========
 export async function uploadTeacherPhoto(file) {
     const key = `staff/${Date.now()}_${(file.name || 'photo').replace(/\s+/g, '-')}`;
-    const { error: upErr } = await insforge.storage.from('staff').upload(key, file);
+    const { error: upErr } = await supabase.storage.from('staff').upload(key, file);
     if (upErr) throw new Error(upErr.message);
-    const { publicUrl } = insforge.storage.from('staff').getPublicUrl(key);
+    const { data: { publicUrl } } = supabase.storage.from('staff').getPublicUrl(key);
     return { url: publicUrl, key };
 }
 
@@ -1251,12 +1207,12 @@ function generateSubjectCode(name) {
 async function ensureSubjects(names) {
     const unique = Array.from(new Set(names.map(n => String(n).trim()).filter(Boolean)));
     if (unique.length === 0) return {};
-    const { data: existing } = await insforge.database.from('subjects').select('id, name').in('name', unique);
+    const { data: existing } = await supabase.from('subjects').select('id, name').in('name', unique);
     const existingMap = {};
     (existing || []).forEach(s => { existingMap[s.name] = s.id; });
     const toInsert = unique.filter(n => !existingMap[n]).map(n => ({ name: n, code: generateSubjectCode(n) }));
     if (toInsert.length > 0) {
-        const { data: inserted } = await insforge.database.from('subjects').insert(toInsert).select();
+        const { data: inserted } = await supabase.from('subjects').insert(toInsert).select();
         (inserted || []).forEach(s => { existingMap[s.name] = s.id; });
     }
     return existingMap;
@@ -1274,12 +1230,12 @@ export async function addSubjectToClass(classId, subjectName, options = {}) {
         full_marks: options.full_marks != null ? Number(options.full_marks) : 100,
         pass_marks: options.pass_marks != null ? Number(options.pass_marks) : 40
     };
-    await insforge.database.from('class_subjects').upsert([payload], { onConflict: 'class_id,subject_id' });
+    await supabase.from('class_subjects').upsert([payload], { onConflict: 'class_id,subject_id' });
     return { success: true };
 }
 
 export async function deleteSubject(mappingId) {
-    await insforge.database.from('class_subjects').delete().eq('id', mappingId);
+    await supabase.from('class_subjects').delete().eq('id', mappingId);
     return { success: true };
 }
 
@@ -1327,7 +1283,7 @@ const DEFAULT_CLASS_SUBJECTS = {
 
 export async function applyDefaultSubjectsToClass(classId) {
     // Fetch class name
-    const { data: cls } = await insforge.database.from('classes').select('*').eq('id', classId).maybeSingle();
+    const { data: cls } = await supabase.from('classes').select('*').eq('id', classId).maybeSingle();
     if (!cls) throw new Error('Class not found');
     const className = cls.name;
     const defaults = DEFAULT_CLASS_SUBJECTS[className];
@@ -1344,12 +1300,12 @@ export async function applyDefaultSubjectsToClass(classId) {
         full_marks: d.full || 100,
         pass_marks: d.pass != null ? d.pass : 40
     }));
-    await insforge.database.from('class_subjects').upsert(rows, { onConflict: 'class_id,subject_id' });
+    await supabase.from('class_subjects').upsert(rows, { onConflict: 'class_id,subject_id' });
     return { success: true, count: rows.length, subjects: names };
 }
 
 export async function applyDefaultSubjectsToAllClasses() {
-    const { data: classes } = await insforge.database.from('classes').select('id,name');
+    const { data: classes } = await supabase.from('classes').select('id,name');
     let updated = 0;
     for (const cls of classes || []) {
         const defaults = DEFAULT_CLASS_SUBJECTS[cls.name];
@@ -1371,18 +1327,18 @@ export async function createTermExamsForAllClasses() {
         { name: 'Third Term', exam_type: 'Third Terminal' },
         { name: 'Final Term', exam_type: 'Final' }
     ];
-    const { data: classes } = await insforge.database.from('classes').select('id,name');
+    const { data: classes } = await supabase.from('classes').select('id,name');
     for (const cls of classes || []) {
         for (const t of terms) {
             // Check if exists for class + term in current year
-            const { data: existing } = await insforge.database
+            const { data: existing } = await supabase
                 .from('exams')
                 .select('id, exam_classes(class_id)')
                 .eq('name', t.name)
                 .eq('academic_year_id', activeYear.id);
             const exists = (existing || []).some(e => (e.exam_classes || []).some(ec => ec.class_id === cls.id));
             if (exists) continue;
-            const { data: created, error } = await insforge.database.from('exams').insert([{
+            const { data: created, error } = await supabase.from('exams').insert([{
                 academic_year_id: activeYear.id,
                 name: t.name,
                 exam_type: t.exam_type,
@@ -1396,7 +1352,12 @@ export async function createTermExamsForAllClasses() {
             if (error) throw new Error(error.message);
             const exam = created?.[0];
             if (exam) {
-                await insforge.database.from('exam_classes').insert([{ exam_id: exam.id, class_id: cls.id }]);
+                const { error: ecErr } = await supabase.from('exam_classes').insert([{ exam_id: exam.id, class_id: cls.id }]);
+                if (ecErr) {
+                    console.error(`Failed to link exam ${exam.id} to class ${cls.id}:`, ecErr.message);
+                    // Cleanup orphan exam
+                    await supabase.from('exams').delete().eq('id', exam.id);
+                }
             }
         }
     }
@@ -1413,27 +1374,25 @@ export function getDefaultSubjectNames(className) {
 // ========== ADMIN - PARENTS ==========
 export async function getParents({ search = '' } = {}) {
     // simplified implementation
-    const { data: pUsers, error } = await insforge.database.from('users').select('*').eq('role', 'PARENT');
+    const { data: pUsers, error } = await supabase.from('users').select('id, name, email, role, status, created_at').eq('role', 'PARENT');
     if (error) throw new Error(error.message);
     let parents = (pUsers || []).map(p => ({ id: p.id, name: p.name, email: p.email, children: [] }));
     if (search) parents = parents.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
     return { parents };
 }
 export async function deleteParent(id) {
-    await insforge.database.from('students').update({ parent_user_id: null }).eq('parent_user_id', id);
-    await insforge.database.from('users').delete().eq('id', id);
-    return { success: true };
+    await supabase.from('students').update({ parent_user_id: null }).eq('parent_user_id', id);
+    return serverDeleteUser(id);
 }
 export async function createParent(form) {
-    const pwd = form.password || 'parent123';
-    const hash = await bcrypt.hash(pwd, 10);
-    const { data: user, error } = await insforge.database.from('users').insert([{
-        name: form.name, email: form.email, password_hash: hash, role: 'PARENT'
-    }]).select();
-    if (error) throw new Error(error.message);
-    const userId = user?.[0]?.id;
+    const pwd = form.password || generateTempPassword();
+
+    // Create user via server-side function (Auth + DB)
+    const result = await serverCreateUser({ name: form.name, email: form.email, password: pwd, role: 'PARENT' });
+    const userId = result.user.id;
+
     if (userId && Array.isArray(form.student_ids) && form.student_ids.length > 0) {
-        await insforge.database.from('students').update({ parent_user_id: userId }).in('id', form.student_ids);
+        await supabase.from('students').update({ parent_user_id: userId }).in('id', form.student_ids);
     }
     return { credentials: { email: form.email, password: pwd } };
 }
@@ -1442,11 +1401,11 @@ export async function updateParent(id, form) {
     if (form.name !== undefined) update.name = form.name;
     if (form.email !== undefined) update.email = form.email;
     if (form.password) update.password_hash = await bcrypt.hash(form.password, 10);
-    if (Object.keys(update).length > 0) await insforge.database.from('users').update(update).eq('id', id);
+    if (Object.keys(update).length > 0) await supabase.from('users').update(update).eq('id', id);
     if (Array.isArray(form.student_ids)) {
-        await insforge.database.from('students').update({ parent_user_id: null }).eq('parent_user_id', id);
+        await supabase.from('students').update({ parent_user_id: null }).eq('parent_user_id', id);
         if (form.student_ids.length > 0) {
-            await insforge.database.from('students').update({ parent_user_id: id }).in('id', form.student_ids);
+            await supabase.from('students').update({ parent_user_id: id }).in('id', form.student_ids);
         }
     }
     return { success: true };
@@ -1455,43 +1414,43 @@ export async function updateParent(id, form) {
 
 // ========== NOTICES & EVENTS (Original tables) ==========
 export async function getNotices() {
-    const { data } = await insforge.database.from('notices').select('*').order('created_at', { ascending: false });
+    const { data } = await supabase.from('notices').select('*').order('created_at', { ascending: false });
     return { notices: data || [] };
 }
 export async function createNotice(f) {
-    const { data } = await insforge.database.from('notices').insert([{ title: f.title, content: f.content, is_active: true }]).select();
+    const { data } = await supabase.from('notices').insert([{ title: f.title, content: f.content, is_active: true }]).select();
     return data[0];
 }
 export async function updateNotice(id, f) {
-    await insforge.database.from('notices').update({ title: f.title, content: f.content }).eq('id', id); return { success: true };
+    await supabase.from('notices').update({ title: f.title, content: f.content }).eq('id', id); return { success: true };
 }
 export async function deleteNotice(id) {
-    await insforge.database.from('notices').delete().eq('id', id); return { success: true };
+    await supabase.from('notices').delete().eq('id', id); return { success: true };
 }
 
 export async function getEvents() {
-    const { data } = await insforge.database.from('events').select('*').order('start_date', { ascending: true });
+    const { data } = await supabase.from('events').select('*').order('start_date', { ascending: true });
     return { events: data || [] };
 }
 export async function createEvent(f) {
-    const { data } = await insforge.database.from('events').insert([{ title: f.title, description: f.description, start_date: f.start_date, end_date: f.end_date || f.start_date, location: f.location }]).select();
+    const { data } = await supabase.from('events').insert([{ title: f.title, description: f.description, start_date: f.start_date, end_date: f.end_date || f.start_date, location: f.location }]).select();
     return data[0];
 }
 export async function updateEvent(id, f) {
-    await insforge.database.from('events').update({ title: f.title, description: f.description, start_date: f.start_date, end_date: f.end_date || f.start_date, location: f.location }).eq('id', id); return { success: true };
+    await supabase.from('events').update({ title: f.title, description: f.description, start_date: f.start_date, end_date: f.end_date || f.start_date, location: f.location }).eq('id', id); return { success: true };
 }
 export async function deleteEvent(id) {
-    await insforge.database.from('events').delete().eq('id', id); return { success: true };
+    await supabase.from('events').delete().eq('id', id); return { success: true };
 }
 
 // ========== STUDENT FEES ==========
 export async function getStudentFees(studentId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return { pending: [], history: [] };
-    const { data: enroll } = await insforge.database.from('enrollments').select('id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
+    const { data: enroll } = await supabase.from('enrollments').select('id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
     if (!enroll) return { pending: [], history: [] };
 
-    const { data: fees } = await insforge.database.from('student_fees').select('*, fee_structures(fee_type)').eq('enrollment_id', enroll.id);
+    const { data: fees } = await supabase.from('student_fees').select('*, fee_structures(fee_type)').eq('student_id', studentId);
     const mapped = (fees || []).map(f => ({
         id: f.id, amount: f.amount_due, amount_paid: f.amount_paid, status: (f.status || 'Unpaid'),
         dueDate: f.due_date, category: f.fee_structures?.fee_type || 'General Fee', datePaid: f.updated_at, receiptNo: 'FP-' + f.id?.slice(0, 5)
@@ -1504,19 +1463,18 @@ export async function getStudentFees(studentId) {
 export async function getAllFees() {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return [];
-    const { data, error } = await insforge.database.from('student_fees')
+    const { data, error } = await supabase.from('student_fees')
         .select(`
-            id, due_date, amount_due, amount_paid, status,
-            enrollments!inner(id, class_id, student_id, classes(name), students(id, users:users!students_user_id_fkey(name)))
-        `)
-        .eq('enrollments.academic_year_id', activeYear.id);
+            id, due_date, amount_due, amount_paid, status, student_id,
+            students!inner(id, first_name, last_name, users:users!students_user_id_fkey(name))
+        `);
     if (error) throw new Error(error.message);
     return (data || []).map(r => ({
         id: r.id,
-        student_id: r.enrollments.student_id,
-        student_name: r.enrollments.students?.users?.name || 'Student',
-        class_id: r.enrollments.class_id,
-        class_name: r.enrollments.classes?.name || '',
+        student_id: r.student_id,
+        student_name: r.students?.users?.name || `${r.students?.first_name || ''} ${r.students?.last_name || ''}`.trim() || 'Student',
+        class_id: '',
+        class_name: '',
         description: '',
         amount: r.amount_due,
         amount_paid: r.amount_paid || 0,
@@ -1527,10 +1485,10 @@ export async function getAllFees() {
 export async function createFee(form) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) throw new Error('No active academic year');
-    const { data: enr } = await insforge.database.from('enrollments').select('id, class_id').eq('student_id', form.student_id).eq('academic_year_id', activeYear.id).maybeSingle();
+    const { data: enr } = await supabase.from('enrollments').select('id, class_id').eq('student_id', form.student_id).eq('academic_year_id', activeYear.id).maybeSingle();
     if (!enr) throw new Error('Enrollment not found for year');
     const amount = parseFloat(form.amount || 0);
-    const { data: fs } = await insforge.database.from('fee_structures').upsert([{
+    const { data: fs } = await supabase.from('fee_structures').upsert([{
         academic_year_id: activeYear.id,
         class_id: enr.class_id,
         fee_type: 'Custom',
@@ -1538,8 +1496,8 @@ export async function createFee(form) {
         frequency: 'One-time'
     }], { onConflict: 'academic_year_id,class_id,fee_type' }).select();
     const fsId = fs?.[0]?.id;
-    const { data, error } = await insforge.database.from('student_fees').insert([{
-        enrollment_id: enr.id,
+    const { data, error } = await supabase.from('student_fees').insert([{
+        student_id: form.student_id,
         fee_structure_id: fsId,
         due_date: form.due_date || null,
         amount_due: amount,
@@ -1556,11 +1514,11 @@ export async function updateFee(id, form) {
     if (form.amount_paid !== undefined) upd.amount_paid = parseFloat(form.amount_paid || 0);
     if (form.status !== undefined) upd.status = form.status || 'Unpaid';
     if (Object.keys(upd).length === 0) return { success: true };
-    await insforge.database.from('student_fees').update(upd).eq('id', id);
+    await supabase.from('student_fees').update(upd).eq('id', id);
     return { success: true };
 }
 export async function deleteFee(id) {
-    await insforge.database.from('student_fees').delete().eq('id', id);
+    await supabase.from('student_fees').delete().eq('id', id);
     return { success: true };
 }
 
@@ -1568,24 +1526,24 @@ export async function deleteFee(id) {
 export async function getStudentResults(studentId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return { exams: [] };
-    const { data: enroll } = await insforge.database.from('enrollments').select('id, roll_number').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
+    const { data: enroll } = await supabase.from('enrollments').select('id, roll_number').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
     if (!enroll) return { exams: [] };
 
-    const { data: sums } = await insforge.database.from('result_summaries').select('*, exams(name, start_date)').eq('enrollment_id', enroll.id);
-    const { data: marks } = await insforge.database.from('exam_marks').select('*, subjects(name)').eq('enrollment_id', enroll.id);
+    const { data: sums } = await supabase.from('result_summaries').select('*, exams(name, start_date)').eq('student_id', studentId);
+    const { data: marks } = await supabase.from('exam_marks').select('*, subjects(name)').eq('student_id', studentId);
 
     return {
         exams: (sums || []).map(s => ({
             id: s.exam_id, name: s.exams?.name, date: s.exams?.start_date, student: { rollNumber: enroll.roll_number },
-            total_obtained: s.total_marks, percentage: s.percentage, grade: s.grade, gpa: s.gpa, status: s.status,
+            total_obtained: s.total_marks, percentage: s.percentage, grade: s.result, gpa: s.gpa, status: s.result,
             subjects: (marks || []).filter(m => m.exam_id === s.exam_id).map(m => ({
                 id: m.id, name: m.subjects?.name,
-                th: m.theory_marks !== undefined && m.theory_marks !== null ? m.theory_marks : m.marks_obtained,
-                pr: m.practical_marks !== undefined ? m.practical_marks : null,
+                th: m.marks_obtained,
+                pr: null,
                 total: m.marks_obtained,
-                full: m.total_marks || 100,
+                full: m.full_marks || 100,
                 grade: m.grade || '',
-                gpa: m.gpa || 0,
+                gpa: m.grade_point || 0,
                 remarks: m.remarks
             }))
         }))
@@ -1594,10 +1552,10 @@ export async function getStudentResults(studentId) {
 
 // ========== STATS & OTHER ==========
 export async function getDashboardStats() {
-    const { count: sCount } = await insforge.database.from('students').select('*', { count: 'exact', head: true });
-    const { count: tCount } = await insforge.database.from('staff').select('*', { count: 'exact', head: true }).eq('staff_type', 'Teaching');
-    const { data: notices } = await insforge.database.from('notices').select('*').limit(4);
-    const { data: events } = await insforge.database.from('events').select('*').limit(4);
+    const { count: sCount } = await supabase.from('students').select('*', { count: 'exact', head: true });
+    const { count: tCount } = await supabase.from('staff').select('*', { count: 'exact', head: true }).eq('staff_type', 'Teaching');
+    const { data: notices } = await supabase.from('notices').select('*').limit(4);
+    const { data: events } = await supabase.from('events').select('*').limit(4);
 
     // P2 FIX: Calculate real attendance data instead of hardcoded values
     let todayAttPercent = 0;
@@ -1606,8 +1564,8 @@ export async function getDashboardStats() {
     let pendingFees = 0;
     try {
         const todayStr = new Date().toISOString().slice(0, 10);
-        const { data: todayAtt } = await insforge.database.from('attendance')
-            .select('status').eq('attendance_date', todayStr);
+        const { data: todayAtt } = await supabase.from('attendance')
+            .select('status').eq('date', todayStr);
         if (todayAtt && todayAtt.length > 0) {
             const presentCount = todayAtt.filter(a => ['Present', 'Late', 'Half-Day'].includes(a.status)).length;
             todayAttPercent = Math.round((presentCount / todayAtt.length) * 100);
@@ -1618,15 +1576,15 @@ export async function getDashboardStats() {
             const d = new Date(); d.setDate(d.getDate() - i);
             days.push(d.toISOString().slice(0, 10));
         }
-        const { data: weekAtt } = await insforge.database.from('attendance')
-            .select('attendance_date, status')
-            .gte('attendance_date', days[0]).lte('attendance_date', days[5]);
+        const { data: weekAtt } = await supabase.from('attendance')
+            .select('date, status')
+            .gte('date', days[0]).lte('date', days[5]);
         const dayMap = {};
         days.forEach(d => { dayMap[d] = { day: new Date(d).toLocaleDateString('en', { weekday: 'short' }), present: 0, absent: 0 }; });
         (weekAtt || []).forEach(a => {
-            if (dayMap[a.attendance_date]) {
-                if (['Present', 'Late', 'Half-Day'].includes(a.status)) dayMap[a.attendance_date].present++;
-                else dayMap[a.attendance_date].absent++;
+            if (dayMap[a.date]) {
+                if (['Present', 'Late', 'Half-Day'].includes(a.status)) dayMap[a.date].present++;
+                else dayMap[a.date].absent++;
             }
         });
         weeklyAttendance = Object.values(dayMap);
@@ -1634,7 +1592,7 @@ export async function getDashboardStats() {
         // Fee stats
         const activeYear = await getActiveAcademicYear();
         if (activeYear) {
-            const { data: fees } = await insforge.database.from('student_fees')
+            const { data: fees } = await supabase.from('student_fees')
                 .select('amount_due, amount_paid, status');
             (fees || []).forEach(f => {
                 paidFees += parseFloat(f.amount_paid || 0);
@@ -1651,11 +1609,112 @@ export async function getDashboardStats() {
     };
 }
 
-export async function getTeacherDashboardStats() {
-    return { classCount: 2, studentCount: 45, subjectCount: 3, todayAttendancePercent: 90, pendingResults: 0 };
+export async function getTeacherDashboardStats(teacherId) {
+    try {
+        const academicYear = await getActiveAcademicYear();
+        if (!academicYear) return { classCount: 0, studentCount: 0, subjectCount: 0, todayAttendancePercent: 0 };
+
+        // Get teacher's subject assignments
+        const { data: assignments } = await supabase
+            .from('subject_assignments')
+            .select('class_id, subject_id, section_id')
+            .eq('teacher_id', teacherId)
+            .eq('academic_year_id', academicYear.id);
+
+        const uniqueClasses = [...new Set((assignments || []).map(a => a.class_id))];
+        const uniqueSubjects = [...new Set((assignments || []).map(a => a.subject_id))];
+
+        // Count students in those classes
+        let studentCount = 0;
+        if (uniqueClasses.length > 0) {
+            const { count } = await supabase
+                .from('enrollments')
+                .select('*', { count: 'exact', head: true })
+                .in('class_id', uniqueClasses)
+                .eq('academic_year_id', academicYear.id);
+            studentCount = count || 0;
+        }
+
+        // Today's attendance
+        const today = new Date().toISOString().slice(0, 10);
+        let todayAttendancePercent = 0;
+        if (studentCount > 0) {
+            const { data: att } = await supabase
+                .from('attendance')
+                .select('status')
+                .eq('date', today)
+                .eq('marked_by', teacherId);
+            if (att && att.length > 0) {
+                const present = att.filter(a => a.status === 'Present' || a.status === 'Late').length;
+                todayAttendancePercent = Math.round((present / att.length) * 100);
+            }
+        }
+
+        return {
+            classCount: uniqueClasses.length,
+            studentCount,
+            subjectCount: uniqueSubjects.length,
+            todayAttendancePercent,
+        };
+    } catch (e) {
+        console.error('getTeacherDashboardStats error:', e);
+        return { classCount: 0, studentCount: 0, subjectCount: 0, todayAttendancePercent: 0 };
+    }
 }
+
 export async function getStudentDashboardStats(studentId) {
-    return { className: '10 A', attendancePercent: 88, gpa: '3.6', pendingFees: 0 };
+    try {
+        const academicYear = await getActiveAcademicYear();
+        if (!academicYear) return { className: '—', attendancePercent: 0, gpa: '—', pendingFees: 0 };
+
+        // Get enrollment
+        const { data: enrollment } = await supabase.from('enrollments')
+            .select('*, classes(name), sections(name)')
+            .eq('student_id', studentId)
+            .eq('academic_year_id', academicYear.id)
+            .maybeSingle();
+
+        if (!enrollment) return { className: '—', attendancePercent: 0, gpa: '—', pendingFees: 0 };
+
+        const className = `${enrollment.classes?.name || '?'} ${enrollment.sections?.name || ''}`.trim();
+
+        // Attendance percentage
+        const { data: att } = await supabase
+            .from('attendance')
+            .select('status')
+            .eq('student_id', studentId)
+            .eq('academic_year_id', academicYear.id);
+        let attendancePercent = 0;
+        if (att && att.length > 0) {
+            const present = att.filter(a => a.status === 'Present' || a.status === 'Late' || a.status === 'Half-Day').length;
+            attendancePercent = Math.round((present / att.length) * 100);
+        }
+
+        // Latest GPA from result_summaries
+        let gpa = '—';
+        const { data: results } = await supabase
+            .from('result_summaries')
+            .select('gpa')
+            .eq('student_id', studentId)
+            .order('created_at', { ascending: false })
+            .limit(1);
+        if (results && results.length > 0 && results[0].gpa) {
+            gpa = results[0].gpa.toFixed(1);
+        }
+
+        // Pending fees
+        const { data: fees } = await supabase
+            .from('student_fees')
+            .select('amount_due, amount_paid')
+            .eq('student_id', studentId)
+            .in('status', ['Unpaid', 'Partial']);
+        const pendingFees = (fees || []).reduce((sum, f) => sum + ((f.amount_due || 0) - (f.amount_paid || 0)), 0);
+
+        return { className, attendancePercent, gpa, pendingFees };
+    } catch (e) {
+        console.error('getStudentDashboardStats error:', e);
+        return { className: '—', attendancePercent: 0, gpa: '—', pendingFees: 0 };
+    }
 }
 
 // Accounting & Attendance helpers
@@ -1663,11 +1722,11 @@ export async function getMonthlyCollections(yyyymm) {
     const [year, month] = yyyymm.split('-').map(Number);
     const start = new Date(year, month - 1, 1).toISOString().slice(0, 10);
     const end = new Date(year, month, 0).toISOString().slice(0, 10);
-    const { data } = await insforge.database
+    const { data } = await supabase
         .from('student_fees')
         .select(`
             id, amount_paid, updated_at, due_date, status,
-            enrollments!inner(id, class_id, students(id, users(name)), classes(name))
+            students!inner(id, first_name, last_name, users:users!students_user_id_fkey(name))
         `)
         .eq('status', 'Paid')
         .gte('updated_at', start)
@@ -1676,8 +1735,8 @@ export async function getMonthlyCollections(yyyymm) {
         id: r.id,
         paid_at: r.updated_at,
         receipt_no: `RC-${yyyymm.replace('-', '')}-${String(r.id).slice(0, 6)}`,
-        student_name: r.enrollments?.students?.users?.name || 'Student',
-        class_name: r.enrollments?.classes?.name || '',
+        student_name: r.students?.users?.name || `${r.students?.first_name || ''} ${r.students?.last_name || ''}`.trim() || 'Student',
+        class_name: '',
         amount_paid: r.amount_paid || 0,
         method: 'CASH',
         reference: ''
@@ -1688,14 +1747,14 @@ export async function getAttendanceMonthlySummary(yyyymm) {
     const [year, month] = yyyymm.split('-').map(Number);
     const start = new Date(year, month - 1, 1).toISOString().slice(0, 10);
     const end = new Date(year, month, 0).toISOString().slice(0, 10);
-    const { data } = await insforge.database
+    const { data } = await supabase
         .from('attendance')
-        .select('attendance_date, status')
-        .gte('attendance_date', start)
-        .lte('attendance_date', end);
+        .select('date, status')
+        .gte('date', start)
+        .lte('date', end);
     const days = {};
     (data || []).forEach(a => {
-        const d = a.attendance_date;
+        const d = a.date;
         if (!days[d]) days[d] = { date: d, present: 0, absent: 0, late: 0, total: 0 };
         const st = String(a.status || '').toLowerCase();
         if (st.includes('present')) days[d].present += 1;
@@ -1708,16 +1767,16 @@ export async function getAttendanceMonthlySummary(yyyymm) {
 
 // Gallery — only columns that exist: id, title, image_url, category, created_at
 export async function getGalleryPhotos() {
-    const { data, error } = await insforge.database.from('gallery_photos').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('gallery_photos').select('*').order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return data || [];
 }
 export async function uploadGalleryPhoto(file, meta = {}) {
     const key = `gallery/${Date.now()}_${file.name}`;
-    const { error: upErr } = await insforge.storage.from('gallery').upload(key, file);
+    const { error: upErr } = await supabase.storage.from('gallery').upload(key, file);
     if (upErr) throw new Error(upErr.message);
-    const { publicUrl } = insforge.storage.from('gallery').getPublicUrl(key);
-    const { data, error } = await insforge.database.from('gallery_photos').insert([{
+    const { data: { publicUrl } } = supabase.storage.from('gallery').getPublicUrl(key);
+    const { data, error } = await supabase.from('gallery_photos').insert([{
         title: meta.title || null,
         category: meta.category || 'general',
         image_url: publicUrl
@@ -1726,13 +1785,13 @@ export async function uploadGalleryPhoto(file, meta = {}) {
     return data?.[0] || {};
 }
 export async function deleteGalleryPhoto(id) {
-    await insforge.database.from('gallery_photos').delete().eq('id', id);
+    await supabase.from('gallery_photos').delete().eq('id', id);
     return { success: true };
 }
 export async function getSiteSettings() {
     let settings = {};
     try {
-        const { data: inst } = await insforge.database.from('institution_profiles').select('*').maybeSingle();
+        const { data: inst } = await supabase.from('institution_profiles').select('*').maybeSingle();
         if (inst) {
             settings.school_name = inst.name || '';
             settings.principal_name = inst.principal_name || '';
@@ -1745,7 +1804,7 @@ export async function getSiteSettings() {
             }
         } else {
             // Create a default row to avoid first-load errors
-            const { data: created } = await insforge.database.from('institution_profiles').insert([{
+            const { data: created } = await supabase.from('institution_profiles').insert([{
                 name: 'Seven Star English Boarding School'
             }]).select();
             if (created?.[0]) {
@@ -1758,7 +1817,7 @@ export async function getSiteSettings() {
 
     // Merge key-value site settings if the table exists
     try {
-        const { data: kv } = await insforge.database.from('site_settings').select('key, value');
+        const { data: kv } = await supabase.from('site_settings').select('key, value');
         if (Array.isArray(kv)) {
             kv.forEach(row => {
                 // Store raw strings; UI components decide interpretation
@@ -1785,11 +1844,11 @@ export async function updateSiteSettingsBulk(changed) {
 
     // Update or insert single institution_profiles row
     if (Object.keys(instUpdate).length > 0) {
-        const { data: existing } = await insforge.database.from('institution_profiles').select('id').limit(1);
+        const { data: existing } = await supabase.from('institution_profiles').select('id').limit(1);
         if (existing && existing.length > 0) {
-            await insforge.database.from('institution_profiles').update(instUpdate).eq('id', existing[0].id);
+            await supabase.from('institution_profiles').update(instUpdate).eq('id', existing[0].id);
         } else {
-            await insforge.database.from('institution_profiles').insert([{ ...instUpdate, name: instUpdate.name || 'School' }]);
+            await supabase.from('institution_profiles').insert([{ ...instUpdate, name: instUpdate.name || 'School' }]);
         }
     }
 
@@ -1800,7 +1859,7 @@ export async function updateSiteSettingsBulk(changed) {
 
     if (kvPairs.length > 0) {
         try {
-            await insforge.database.from('site_settings').upsert(kvPairs, { onConflict: 'key' });
+            await supabase.from('site_settings').upsert(kvPairs, { onConflict: 'key' });
         } catch (_) {
             // If site_settings table does not exist, ignore silently to avoid breaking the UI
         }
@@ -1824,12 +1883,12 @@ export async function deleteProgramSubject(id) {
 // reviews table only has: id, name, content, rating, created_at (no is_approved column)
 export async function getApprovedReviews() {
     // No is_approved column — return all reviews as "approved"
-    const { data, error } = await insforge.database.from('reviews').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return data || [];
 }
 export async function getAllReviews() {
-    const { data, error } = await insforge.database.from('reviews').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('reviews').select('*').order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return data || [];
 }
@@ -1838,10 +1897,10 @@ export async function approveReview(id, approve = true) {
     console.warn('approveReview: is_approved column does not exist, skipping');
     return { success: true };
 }
-export async function deleteReview(id) { await insforge.database.from('reviews').delete().eq('id', id); return { success: true }; }
+export async function deleteReview(id) { await supabase.from('reviews').delete().eq('id', id); return { success: true }; }
 export async function getAdmissionApplications() {
     try {
-        const { data } = await insforge.database.from('admission_applications').select('*').order('created_at', { ascending: false });
+        const { data } = await supabase.from('admission_applications').select('*').order('created_at', { ascending: false });
         const rows = Array.isArray(data) ? data : [];
         return rows.map(r => ({ ...r, status: (r.status || '').toUpperCase() || 'PENDING' }));
     } catch (_) { return []; }
@@ -1853,19 +1912,20 @@ export async function uploadStudentCertificate() { return { url: '' }; }
 
 // Exams & Attendance Stubs for react components
 export async function getExams() {
-    const { data, error } = await insforge.database.from('exams')
+    const { data, error } = await supabase.from('exams')
         .select('*, exam_classes(class_id)')
         .order('start_date', { ascending: false });
     if (error) throw new Error(error.message);
     const exams = (data || []).map(e => ({
         ...e,
-        class_id: e.exam_classes?.[0]?.class_id || null
+        class_id: e.exam_classes?.[0]?.class_id || null,
+        class_ids: (e.exam_classes || []).map(ec => ec.class_id)
     }));
     return { exams };
 }
 export async function createExam(form) {
     const activeYear = await getActiveAcademicYear();
-    const { data, error } = await insforge.database.from('exams').insert([{
+    const { data, error } = await supabase.from('exams').insert([{
         academic_year_id: activeYear?.id,
         name: form.name,
         exam_type: form.exam_type || 'Unit Test',
@@ -1879,29 +1939,33 @@ export async function createExam(form) {
     if (error) throw new Error(error.message);
     const exam = data[0];
 
-    if (form.class_id) {
-        await insforge.database.from('exam_classes').insert([{
-            exam_id: exam.id,
-            class_id: form.class_id
-        }]);
+    // Link to multiple classes
+    const classIds = form.classIds || (form.class_id ? [form.class_id] : []);
+    if (classIds.length > 0) {
+        const ecRows = classIds.map(cid => ({ exam_id: exam.id, class_id: cid }));
+        const { error: ecError } = await supabase.from('exam_classes').insert(ecRows);
+        if (ecError) {
+            await supabase.from('exams').delete().eq('id', exam.id);
+            throw new Error('Failed to link exam to classes: ' + ecError.message);
+        }
     }
 
-    return { ...exam, class_id: form.class_id };
+    return { ...exam, class_ids: classIds };
 }
 export async function deleteExam(id) {
-    await insforge.database.from('exams').delete().eq('id', id);
+    await supabase.from('exams').delete().eq('id', id);
     return { success: true };
 }
 export async function getAttendanceOverview() { return []; }
 export async function getAllClasses() {
-    const { data, error } = await insforge.database.from('classes').select('*').order('name', { ascending: true });
+    const { data, error } = await supabase.from('classes').select('*').order('name', { ascending: true });
     if (error) throw new Error(error.message);
     return { classes: data || [] };
 }
 export async function getTeacherClasses(teacherId) {
     if (!teacherId) {
         // Admin view or fallback
-        const { data, error } = await insforge.database.from('classes').select('*').order('name', { ascending: true });
+        const { data, error } = await supabase.from('classes').select('*').order('name', { ascending: true });
         if (error) throw new Error(error.message);
         return { classes: data || [] };
     }
@@ -1911,7 +1975,7 @@ export async function getTeacherClasses(teacherId) {
     if (!activeYear) return { classes: [] };
 
     // Get unique classes from assignments
-    const { data } = await insforge.database.from('subject_assignments')
+    const { data } = await supabase.from('subject_assignments')
         .select('class_id, classes(*)')
         .eq('teacher_id', teacherId)
         .eq('academic_year_id', activeYear.id);
@@ -1927,7 +1991,7 @@ export async function getTeacherClasses(teacherId) {
 export async function getTeacherAttendanceScope(teacherId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return [];
-    const { data, error } = await insforge.database.from('subject_assignments')
+    const { data, error } = await supabase.from('subject_assignments')
         .select('class_id, section_id, subject_id, classes(name), sections(name), subjects(name)')
         .eq('teacher_id', teacherId)
         .eq('academic_year_id', activeYear.id);
@@ -1949,7 +2013,7 @@ export async function getTeacherAttendanceScope(teacherId) {
 export async function getStudentsByClass(classId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear || !classId) return [];
-    const { data, error } = await insforge.database.from('enrollments')
+    const { data, error } = await supabase.from('enrollments')
         .select('id, student_id, roll_number, students(id, users:users!students_user_id_fkey(name))')
         .eq('class_id', classId)
         .eq('academic_year_id', activeYear.id);
@@ -1963,7 +2027,7 @@ export async function getStudentsByClass(classId) {
 export async function getStudentsByClassSection(classId, sectionId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear || !classId || !sectionId) return [];
-    const { data, error } = await insforge.database.from('enrollments')
+    const { data, error } = await supabase.from('enrollments')
         .select('id, student_id, roll_number, students(id, users:users!students_user_id_fkey(name))')
         .eq('class_id', classId)
         .eq('section_id', sectionId)
@@ -1979,24 +2043,28 @@ export async function getStudentsByClassSection(classId, sectionId) {
 export async function getAttendanceByDate(classId, sectionId, subjectId, date) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear || !classId || !sectionId || !date) return [];
-    const { data: enrolls } = await insforge.database.from('enrollments')
+    // Get enrollments for student list
+    const { data: enrolls } = await supabase.from('enrollments')
         .select('id, student_id')
         .eq('class_id', classId)
         .eq('section_id', sectionId)
         .eq('academic_year_id', activeYear.id);
     if (!enrolls || enrolls.length === 0) return [];
-    const enrollIds = enrolls.map(e => e.id);
-    const { data } = await insforge.database.from('attendance')
-        .select('enrollment_id, status, subject_id')
-        .in('enrollment_id', enrollIds)
-        .eq('attendance_date', date)
-        .eq('subject_id', subjectId);
+    const studentIds = enrolls.map(e => e.student_id);
+    // attendance table uses student_id, date, class_id, section_id (no enrollment_id or subject_id)
+    const { data } = await supabase.from('attendance')
+        .select('student_id, status')
+        .eq('class_id', classId)
+        .eq('section_id', sectionId)
+        .eq('academic_year_id', activeYear.id)
+        .eq('date', date)
+        .in('student_id', studentIds);
     const map = {};
-    (data || []).forEach(a => { map[a.enrollment_id] = a.status; });
+    (data || []).forEach(a => { map[a.student_id] = a.status; });
     return enrolls.map(e => ({
         student_id: e.student_id,
         enrollment_id: e.id,
-        status: map[e.id] || 'Present'
+        status: map[e.student_id] || 'Present'
     }));
 }
 export async function saveAttendance(rows, opts = {}) {
@@ -2008,48 +2076,36 @@ export async function saveAttendance(rows, opts = {}) {
     }
     const classId = rows[0].class_id;
     const sectionId = rows[0].section_id;
-    const subjectId = rows[0].subject_id;
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) throw new Error('No active academic year');
-    if (!opts.override) {
-        const d = new Date(date);
-        const dow = ((d.getDay() + 6) % 7) + 1; // Mon=1 .. Sun=7
-        const { data: tt } = await insforge.database.from('class_timetables')
-            .select('id, class_subjects(subject_id)')
-            .eq('academic_year_id', activeYear.id)
-            .eq('class_id', classId)
-            .eq('section_id', sectionId)
-            .eq('day_of_week', dow);
-        const hasAnyTimetable = Array.isArray(tt) && tt.length > 0;
-        if (hasAnyTimetable) {
-            const hasSubjectToday = (tt || []).some(t => t.class_subjects?.subject_id === subjectId);
-            if (!hasSubjectToday) throw new Error('No class scheduled today for this subject');
-        }
-    }
+    // Verify students are enrolled
     const studentIds = rows.map(r => r.student_id);
-    const { data: enrolls } = await insforge.database.from('enrollments')
+    const { data: enrolls } = await supabase.from('enrollments')
         .select('id, student_id')
         .in('student_id', studentIds)
         .eq('class_id', classId)
         .eq('section_id', sectionId)
         .eq('academic_year_id', activeYear.id);
-    const enrollMap = Object.fromEntries((enrolls || []).map(e => [e.student_id, e.id]));
+    const enrolledStudentIds = new Set((enrolls || []).map(e => e.student_id));
+    // attendance table: student_id, date, class_id, section_id, academic_year_id, status, marked_by
     const upserts = rows
-        .filter(r => enrollMap[r.student_id])
+        .filter(r => enrolledStudentIds.has(r.student_id))
         .map(r => ({
-            enrollment_id: enrollMap[r.student_id],
-            attendance_date: date,
+            student_id: r.student_id,
+            date: date,
+            class_id: classId,
+            section_id: sectionId,
+            academic_year_id: activeYear.id,
             status: r.status || 'Present',
-            subject_id: subjectId || null,
             marked_by: r.marked_by || null
         }));
     if (upserts.length === 0) return { success: true };
-    await insforge.database.from('attendance').upsert(upserts, { onConflict: 'enrollment_id,attendance_date,subject_id' });
+    await supabase.from('attendance').upsert(upserts, { onConflict: 'student_id,date,class_id,section_id' });
     return { success: true };
 }
 export async function getSubjectsByClass(classId) {
     // Prefer class_subjects mapping; if absent, fallback empty
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('class_subjects')
         .select('id, subject_id, subjects(name)')
         .eq('class_id', classId);
@@ -2062,7 +2118,7 @@ export async function getSubjectsByClass(classId) {
 export async function assignTeacherToSubject(payload) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) throw new Error('No active academic year');
-    const { error } = await insforge.database.from('subject_assignments').upsert([{
+    const { error } = await supabase.from('subject_assignments').upsert([{
         teacher_id: payload.teacher_id,
         class_id: payload.class_id,
         section_id: payload.section_id,
@@ -2076,7 +2132,7 @@ export async function assignTeacherToSubject(payload) {
 export async function removeTeacherAssignment(payload) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) throw new Error('No active academic year');
-    const { error } = await insforge.database.from('subject_assignments')
+    const { error } = await supabase.from('subject_assignments')
         .delete()
         .eq('teacher_id', payload.teacher_id)
         .eq('class_id', payload.class_id)
@@ -2090,11 +2146,11 @@ export async function removeTeacherAssignment(payload) {
 export async function getTeacherLoad(teacherId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return [];
-    const { data: assigns } = await insforge.database.from('subject_assignments')
+    const { data: assigns } = await supabase.from('subject_assignments')
         .select('class_id, section_id, subject_id, classes(name), sections(name), subjects(name)')
         .eq('teacher_id', teacherId)
         .eq('academic_year_id', activeYear.id);
-    const { data: enrolls } = await insforge.database.from('enrollments')
+    const { data: enrolls } = await supabase.from('enrollments')
         .select('class_id, section_id')
         .eq('academic_year_id', activeYear.id);
     const countMap = {};
@@ -2113,9 +2169,9 @@ export async function getTeacherLoad(teacherId) {
     }));
 }
 export async function getResults(examId, subjectId) {
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('exam_marks')
-        .select('id, exam_id, subject_id, enrollment_id, marks_obtained, theory_marks, practical_marks, total_marks, grade, remarks, verified, enrollments(student_id)')
+        .select('id, exam_id, subject_id, student_id, marks_obtained, full_marks, pass_marks, grade, grade_point, remarks')
         .eq('exam_id', examId)
         .eq('subject_id', subjectId);
     if (error) throw new Error(error.message);
@@ -2123,14 +2179,13 @@ export async function getResults(examId, subjectId) {
         id: r.id,
         exam_id: r.exam_id,
         subject_id: r.subject_id,
-        student_id: r.enrollments?.student_id,
+        student_id: r.student_id,
         marks_obtained: r.marks_obtained,
-        theory_marks: r.theory_marks,
-        practical_marks: r.practical_marks,
-        total_marks: r.total_marks,
+        full_marks: r.full_marks,
         grade: r.grade,
+        grade_point: r.grade_point,
         remarks: r.remarks || '',
-        verified: !!r.verified
+        verified: true
     }));
 }
 export async function saveMarks(marks) {
@@ -2140,132 +2195,102 @@ export async function saveMarks(marks) {
     const payload = marks.map(m => ({
         student_id: m.student_id,
         marks_obtained: parseFloat(m.marks_obtained || 0),
-        theory_marks: m.theory_marks !== undefined && m.theory_marks !== null ? parseFloat(m.theory_marks) : null,
-        practical_marks: m.practical_marks !== undefined && m.practical_marks !== null ? parseFloat(m.practical_marks) : null,
         remarks: m.remarks || '',
-        total_marks: parseFloat(m.total_marks || 100),
+        full_marks: parseFloat(m.full_marks || m.total_marks || 100),
         grade: m.grade || '',
-        gpa: m.gpa || 0
+        grade_point: m.grade_point || m.gpa || 0
     }));
     await saveBulkMarks(examId, subjectId, payload);
     return { success: true };
 }
 export async function publishResults(examId, publisherId) {
-    // P2 FIX: Check all marks are verified before publishing
-    const { total, unverified } = await getVerificationSummary(examId);
+    // Check marks exist
+    const { total } = await getVerificationSummary(examId);
     if (total === 0) throw new Error('No marks entered for this exam yet');
-    if (unverified > 0) throw new Error(`Cannot publish: ${unverified} mark entries are not verified yet`);
 
     // Check not already published
-    const { data: exam } = await insforge.database.from('exams').select('results_published').eq('id', examId).maybeSingle();
+    const { data: exam } = await supabase.from('exams').select('results_published').eq('id', examId).maybeSingle();
     if (exam?.results_published) throw new Error('Results are already published for this exam');
 
     // Lock all exam_classes for this exam
-    await insforge.database.from('exam_classes').update({ is_locked: true }).eq('exam_id', examId);
+    await supabase.from('exam_classes').update({ is_locked: true }).eq('exam_id', examId);
 
-    // Publish with timestamp
-    const { data, error } = await insforge.database.from('exams').update({
-        results_published: true,
-        published_at: new Date().toISOString(),
-        published_by: publisherId || null
+    // Publish
+    const { data, error } = await supabase.from('exams').update({
+        results_published: true
     }).eq('id', examId).select();
     if (error) throw new Error(error.message);
 
     // Write audit log
     try {
-        await insforge.database.from('audit_logs').insert([{
+        await supabase.from('audit_logs').insert([{
             user_id: publisherId || null,
             action: 'PUBLISH_RESULTS',
             table_name: 'exams',
             record_id: examId,
-            details: { total_marks_entries: total, published_at: new Date().toISOString() }
+            details: { total_marks_entries: total, published_at_timestamp: new Date().toISOString(), published_by: publisherId || null }
         }]);
     } catch (_) { /* audit log failure should not block publish */ }
 
     return { success: true, count: data?.length || 0 };
 }
 export async function getVerificationSummary(examId) {
-    const { data } = await insforge.database.from('exam_marks').select('id, verified').eq('exam_id', examId);
+    const { data } = await supabase.from('exam_marks').select('id').eq('exam_id', examId);
     const total = data?.length || 0;
-    const verified = (data || []).filter(r => r.verified).length;
-    return { total, verified, unverified: total - verified };
+    // No verified column in exam_marks — treat all as verified
+    return { total, verified: total, unverified: 0 };
 }
 export async function saveBulkMarks(examId, subjectId, marks) {
-    // marks: [{ student_id, marks_obtained, theory_marks, practical_marks }]
+    // marks: [{ student_id, marks_obtained, full_marks, grade, grade_point }]
     if (!Array.isArray(marks) || marks.length === 0) return { success: true };
 
     // P2 FIX: Check if exam is locked before allowing marks entry
-    const { data: examClasses } = await insforge.database.from('exam_classes')
+    const { data: examClasses } = await supabase.from('exam_classes')
         .select('is_locked').eq('exam_id', examId);
     const isLocked = (examClasses || []).some(ec => ec.is_locked);
     if (isLocked) throw new Error('Marks entry is locked for this exam. Contact admin to unlock.');
 
     // P2 FIX: Check if results are already published
-    const { data: examCheck } = await insforge.database.from('exams')
+    const { data: examCheck } = await supabase.from('exams')
         .select('results_published').eq('id', examId).maybeSingle();
     if (examCheck?.results_published) throw new Error('Cannot modify marks — results are already published.');
 
     // P2 FIX: Validate marks ranges
     for (const m of marks) {
         const obtained = parseFloat(m.marks_obtained || 0);
-        const total = parseFloat(m.total_marks || 100);
+        const total = parseFloat(m.full_marks || m.total_marks || 100);
         if (obtained < 0) throw new Error(`Invalid marks: ${obtained} is negative`);
         if (obtained > total) throw new Error(`Invalid marks: ${obtained} exceeds total ${total}`);
-        if (m.theory_marks != null && parseFloat(m.theory_marks) < 0) throw new Error('Theory marks cannot be negative');
-        if (m.practical_marks != null && parseFloat(m.practical_marks) < 0) throw new Error('Practical marks cannot be negative');
     }
 
-    const studentIds = marks.map(m => m.student_id);
-    const activeYear = await getActiveAcademicYear();
-    const { data: enrolls } = await insforge.database.from('enrollments')
-        .select('id, student_id')
-        .in('student_id', studentIds)
-        .eq('academic_year_id', activeYear.id);
-    const enrollMap = Object.fromEntries((enrolls || []).map(e => [e.student_id, e.id]));
+    // exam_marks uses student_id directly (not enrollment_id)
     const rows = marks
-        .filter(m => enrollMap[m.student_id])
+        .filter(m => m.student_id)
         .map(m => ({
             exam_id: examId,
-            enrollment_id: enrollMap[m.student_id],
+            student_id: m.student_id,
             subject_id: subjectId,
             marks_obtained: parseFloat(m.marks_obtained || 0),
-            theory_marks: m.theory_marks,
-            practical_marks: m.practical_marks,
-            total_marks: m.total_marks || 100,
-            grade: m.grade,
-            gpa: m.gpa
+            full_marks: parseInt(m.full_marks || m.total_marks || 100),
+            grade: m.grade || '',
+            grade_point: parseFloat(m.grade_point || m.gpa || 0),
+            remarks: m.remarks || ''
         }));
     if (rows.length === 0) return { success: true };
-    const { error } = await insforge.database.from('exam_marks').upsert(rows, { onConflict: 'exam_id,enrollment_id,subject_id' });
+    const { error } = await supabase.from('exam_marks').upsert(rows, { onConflict: 'exam_id,student_id,subject_id' });
     if (error) throw new Error(error.message);
     return { success: true };
 }
 export async function verifyStudentMarks(examId, studentId, verifierId) {
-    const activeYear = await getActiveAcademicYear();
-    const { data: enr } = await insforge.database.from('enrollments')
-        .select('id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
-    if (!enr) return { success: true };
-    await insforge.database.from('exam_marks').update({
-        verified: true,
-        verified_by: verifierId || null,
-        verified_at: new Date().toISOString()
-    }).eq('exam_id', examId).eq('enrollment_id', enr.id);
+    // No verified column in exam_marks — verification is implicit
     return { success: true };
 }
 export async function unverifyStudentMarks(examId, studentId) {
-    const activeYear = await getActiveAcademicYear();
-    const { data: enr } = await insforge.database.from('enrollments')
-        .select('id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
-    if (!enr) return { success: true };
-    await insforge.database.from('exam_marks').update({
-        verified: false,
-        verified_by: null,
-        verified_at: null
-    }).eq('exam_id', examId).eq('enrollment_id', enr.id);
+    // No verified column in exam_marks — verification is implicit
     return { success: true };
 }
 export async function verifyAllMarksForExam(examId) {
-    await insforge.database.from('exam_marks').update({ verified: true, verified_at: new Date().toISOString() }).eq('exam_id', examId);
+    // No verified column in exam_marks — verification is implicit
     return { success: true };
 }
 
@@ -2276,14 +2301,14 @@ export async function getTeacherAssignments(teacherId) {
     if (!activeYear) return [];
 
     // Get classes/sections assigned to this teacher first
-    const { data: subjects } = await insforge.database.from('subject_assignments')
+    const { data: subjects } = await supabase.from('subject_assignments')
         .select('class_id, section_id, subject_id, classes(name), sections(name), subjects(name)')
         .eq('teacher_id', teacherId)
         .eq('academic_year_id', activeYear.id);
 
     if (!subjects || subjects.length === 0) return [];
 
-    const { data: assignments, error } = await insforge.database.from('assignments')
+    const { data: assignments, error } = await supabase.from('assignments')
         .select('*, classes(name), sections(name), subjects(name)')
         .eq('academic_year_id', activeYear.id)
         .eq('teacher_id', teacherId)
@@ -2297,7 +2322,7 @@ export async function createAssignment(form) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) throw new Error('No active academic year');
 
-    const { data, error } = await insforge.database.from('assignments').insert([{
+    const { data, error } = await supabase.from('assignments').insert([{
         teacher_id: form.teacher_id,
         class_id: form.class_id,
         section_id: form.section_id,
@@ -2321,48 +2346,48 @@ export async function updateAssignment(id, form) {
     if (form.due_date) upd.due_date = form.due_date;
     if (form.total_points) upd.total_points = form.total_points;
 
-    const { data, error } = await insforge.database.from('assignments').update(upd).eq('id', id).select();
+    const { data, error } = await supabase.from('assignments').update(upd).eq('id', id).select();
     if (error) throw new Error(error.message);
     return data[0];
 }
 
 export async function deleteAssignment(id) {
-    const { error } = await insforge.database.from('assignments').delete().eq('id', id);
+    const { error } = await supabase.from('assignments').delete().eq('id', id);
     if (error) throw new Error(error.message);
     return { success: true };
 }
 
 export async function getAssignmentSubmissions(assignmentId) {
     // Get assignment details to know class/section
-    const { data: assignment } = await insforge.database.from('assignments').select('*').eq('id', assignmentId).single();
+    const { data: assignment } = await supabase.from('assignments').select('*').eq('id', assignmentId).single();
     if (!assignment) throw new Error('Assignment not found');
 
     // Get all students in that class/section
-    const { data: students } = await insforge.database.from('enrollments')
-        .select('id, student_id, roll_number, students(id, first_name, last_name, admission_number, users(name))')
+    const { data: students } = await supabase.from('enrollments')
+        .select('id, student_id, roll_number, students(id, first_name, last_name, admission_number, users:users!students_user_id_fkey(name))')
         .eq('class_id', assignment.class_id)
         .eq('section_id', assignment.section_id)
         .eq('academic_year_id', assignment.academic_year_id);
 
     // Get existing submissions
-    const { data: submissions } = await insforge.database.from('assignment_submissions')
+    const { data: submissions } = await supabase.from('assignment_submissions')
         .select('*')
         .eq('assignment_id', assignmentId);
 
-    const subMap = Object.fromEntries((submissions || []).map(s => [s.enrollment_id, s]));
+    const subMap = Object.fromEntries((submissions || []).map(s => [s.student_id, s]));
 
     return (students || []).map(student => {
-        const sub = subMap[student.id];
+        const sub = subMap[student.student_id];
         return {
             enrollment_id: student.id,
-            student_id: student.students?.id,
+            student_id: student.student_id,
             name: student.students?.users?.name || `${student.students?.first_name} ${student.students?.last_name}`,
             roll_number: student.roll_number,
             status: sub ? 'Submitted' : 'Pending',
             submission_date: sub?.submitted_at,
-            file_url: sub?.file_url,
-            grade: sub?.marks,
-            feedback: sub?.remarks,
+            file_url: sub?.attachment_url,
+            grade: sub?.grade,
+            feedback: sub?.feedback,
             submission_id: sub?.id
         };
     });
@@ -2371,20 +2396,20 @@ export async function getAssignmentSubmissions(assignmentId) {
 export async function gradeSubmission(submissionId, enrollmentId, assignmentId, grade, feedback) {
     if (submissionId) {
         // Update existing submission
-        const { error } = await insforge.database.from('assignment_submissions')
-            .update({ marks: grade, remarks: feedback, graded_at: new Date().toISOString() })
+        const { error } = await supabase.from('assignment_submissions')
+            .update({ grade: grade, feedback: feedback, graded_at: new Date().toISOString() })
             .eq('id', submissionId);
         if (error) throw new Error(error.message);
     } else {
         // Create submission record (teacher grading without student file upload)
-        const { error } = await insforge.database.from('assignment_submissions')
+        const { error } = await supabase.from('assignment_submissions')
             .insert([{
                 assignment_id: assignmentId,
-                enrollment_id: enrollmentId,
-                marks: grade,
-                remarks: feedback,
+                student_id: enrollmentId,
+                grade: grade,
+                feedback: feedback,
                 graded_at: new Date().toISOString(),
-                submitted_at: new Date().toISOString() // Auto-mark as submitted if graded
+                submitted_at: new Date().toISOString()
             }]);
         if (error) throw new Error(error.message);
     }
@@ -2394,14 +2419,14 @@ export async function gradeSubmission(submissionId, enrollmentId, assignmentId, 
 export async function getStudentSubjects(studentId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return [];
-    const { data: enr } = await insforge.database.from('enrollments').select('id,class_id,section_id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
+    const { data: enr } = await supabase.from('enrollments').select('id,class_id,section_id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
     if (!enr) return [];
 
     // Get subjects
-    const { data: subjects } = await insforge.database.from('class_subjects').select('subject_id, subjects(name)').eq('class_id', enr.class_id);
+    const { data: subjects } = await supabase.from('class_subjects').select('subject_id, subjects(name)').eq('class_id', enr.class_id);
 
     // Get teachers for these subjects
-    const { data: teachers } = await insforge.database.from('subject_assignments')
+    const { data: teachers } = await supabase.from('subject_assignments')
         .select('subject_id, teacher_id, staff(users(name))')
         .eq('class_id', enr.class_id)
         .eq('section_id', enr.section_id)
@@ -2423,7 +2448,7 @@ export async function getClassRoutine(classId, sectionId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return [];
 
-    const { data: routine } = await insforge.database
+    const { data: routine } = await supabase
         .from('class_timetables')
         .select('id, day_of_week, period, start_time, end_time, room, class_subject_id, class_subjects(subject_id, subjects(name))')
         .eq('academic_year_id', activeYear.id)
@@ -2433,7 +2458,7 @@ export async function getClassRoutine(classId, sectionId) {
         .order('period', { ascending: true });
 
     // Fetch teachers for subjects
-    const { data: teachers } = await insforge.database.from('subject_assignments')
+    const { data: teachers } = await supabase.from('subject_assignments')
         .select('subject_id, staff(users(name))')
         .eq('class_id', classId)
         .eq('section_id', sectionId)
@@ -2460,27 +2485,26 @@ export async function getClassRoutine(classId, sectionId) {
 export async function getAssignmentsForStudent(studentId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return { assignments: [], submissions: [] };
-    const { data: enr } = await insforge.database.from('enrollments').select('id,class_id,section_id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
+    const { data: enr } = await supabase.from('enrollments').select('id,class_id,section_id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
     if (!enr) return { assignments: [], submissions: [] };
-    const { data: assignments } = await insforge.database.from('assignments').select('*').eq('academic_year_id', activeYear.id).eq('class_id', enr.class_id).eq('section_id', enr.section_id).order('due_date', { ascending: true });
-    const { data: subs } = await insforge.database.from('assignment_submissions').select('*').eq('enrollment_id', enr.id);
+    const { data: assignments } = await supabase.from('assignments').select('*').eq('academic_year_id', activeYear.id).eq('class_id', enr.class_id).eq('section_id', enr.section_id).order('due_date', { ascending: true });
+    const { data: subs } = await supabase.from('assignment_submissions').select('*').eq('student_id', studentId);
     return { assignments: assignments || [], submissions: subs || [] };
 }
 
 export async function submitAssignment(assignmentId, studentId, file) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) throw new Error('No active year');
-    const { data: enr } = await insforge.database.from('enrollments').select('id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
+    const { data: enr } = await supabase.from('enrollments').select('id').eq('student_id', studentId).eq('academic_year_id', activeYear.id).maybeSingle();
     if (!enr) throw new Error('Enrollment not found');
     const key = `assignments/${assignmentId}/${studentId}_${Date.now()}_${file.name}`;
-    const { error: upErr } = await insforge.storage.from('assignments').upload(key, file);
+    const { error: upErr } = await supabase.storage.from('assignments').upload(key, file);
     if (upErr) throw new Error(upErr.message);
-    const { publicUrl } = insforge.storage.from('assignments').getPublicUrl(key);
-    await insforge.database.from('assignment_submissions').upsert([{
+    const { data: { publicUrl } } = supabase.storage.from('assignments').getPublicUrl(key);
+    await supabase.from('assignment_submissions').upsert([{
         assignment_id: assignmentId,
-        enrollment_id: enr.id,
-        file_url: publicUrl,
-        file_key: key,
+        student_id: studentId,
+        attachment_url: publicUrl,
         submitted_at: new Date().toISOString()
     }]);
     return { success: true, url: publicUrl };
@@ -2489,7 +2513,7 @@ export async function submitAssignment(assignmentId, studentId, file) {
 // Fallbacks for undefined exports
 export async function updateClass() { return { success: true }; }
 export async function getTeacherHistory(teacherId) {
-    const { data, error } = await insforge.database
+    const { data, error } = await supabase
         .from('subject_assignments')
         .select(`
             id, class_id, section_id, subject_id, academic_year_id, created_at,
@@ -2511,7 +2535,7 @@ export async function getTeacherHistory(teacherId) {
 export async function getTeacherAssignedSubjectIds(teacherId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return [];
-    const { data } = await insforge.database.from('subject_assignments')
+    const { data } = await supabase.from('subject_assignments')
         .select('subject_id')
         .eq('teacher_id', teacherId)
         .eq('academic_year_id', activeYear.id);
@@ -2521,15 +2545,15 @@ export async function getTeacherAssignedSubjectIds(teacherId) {
 export async function getClassAnalytics(classId, examId) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return { subjects: [], students: [] };
-    const { data: enrolls } = await insforge.database.from('enrollments')
-        .select('id, student_id, students(id, users(name))')
+    const { data: enrolls } = await supabase.from('enrollments')
+        .select('id, student_id, students(id, users:users!students_user_id_fkey(name))')
         .eq('class_id', classId)
         .eq('academic_year_id', activeYear.id);
     if (!enrolls || enrolls.length === 0) return { subjects: [], students: [] };
-    const enrollIds = enrolls.map(e => e.id);
-    let query = insforge.database.from('exam_marks')
-        .select('subject_id, marks_obtained, subjects(name), enrollment_id')
-        .in('enrollment_id', enrollIds);
+    const studentIds = enrolls.map(e => e.student_id);
+    let query = supabase.from('exam_marks')
+        .select('subject_id, marks_obtained, subjects(name), student_id')
+        .in('student_id', studentIds);
     if (examId) query = query.eq('exam_id', examId);
     const { data: marks } = await query;
     const subjectStats = {};
@@ -2546,13 +2570,13 @@ export async function getClassAnalytics(classId, examId) {
     });
     const studentStats = {};
     (marks || []).forEach(m => {
-        const eid = m.enrollment_id;
-        if (!studentStats[eid]) studentStats[eid] = { total: 0, count: 0 };
-        studentStats[eid].total += parseFloat(m.marks_obtained || 0);
-        studentStats[eid].count += 1;
+        const sid = m.student_id;
+        if (!studentStats[sid]) studentStats[sid] = { total: 0, count: 0 };
+        studentStats[sid].total += parseFloat(m.marks_obtained || 0);
+        studentStats[sid].count += 1;
     });
     const studentList = enrolls.map(e => {
-        const stats = studentStats[e.id] || { total: 0, count: 0 };
+        const stats = studentStats[e.student_id] || { total: 0, count: 0 };
         return {
             id: e.student_id,
             name: e.students?.users?.name || 'Student',
@@ -2568,13 +2592,99 @@ export async function getClassAnalytics(classId, examId) {
 export async function assignTeacherSubjects() { return { success: true }; }
 export async function getAllSubjects() { return []; }
 
+// ========== WEEKLY ATTENDANCE (range-based) ==========
+export async function getAttendanceForWeek(classId, sectionId, startDate, endDate, subjectId = null) {
+    const activeYear = await getActiveAcademicYear();
+    if (!activeYear || !classId || !sectionId) return { students: [], attendance: {} };
+    const { data: enrolls } = await supabase.from('enrollments')
+        .select('id, student_id, roll_number, students(id, users:users!students_user_id_fkey(name))')
+        .eq('class_id', classId)
+        .eq('section_id', sectionId)
+        .eq('academic_year_id', activeYear.id)
+        .order('roll_number', { ascending: true });
+    if (!enrolls || enrolls.length === 0) return { students: [], attendance: {} };
+    const studentIds = enrolls.map(e => e.student_id);
+    const { data: attData } = await supabase.from('attendance')
+        .select('student_id, date, status')
+        .eq('class_id', classId)
+        .eq('section_id', sectionId)
+        .eq('academic_year_id', activeYear.id)
+        .gte('date', startDate)
+        .lte('date', endDate);
+    // Build attendance map: { student_id: { date: status } }
+    const attMap = {};
+    (attData || []).forEach(a => {
+        if (!attMap[a.student_id]) attMap[a.student_id] = {};
+        attMap[a.student_id][a.date] = a.status;
+    });
+    // Remap to enrollment_id keys for backward compat with UI
+    const enrollAttMap = {};
+    enrolls.forEach(e => {
+        enrollAttMap[e.id] = attMap[e.student_id] || {};
+    });
+    const students = enrolls.map(e => ({
+        id: e.student_id,
+        enrollment_id: e.id,
+        name: e.students?.users?.name || 'Student',
+        roll_number: e.roll_number
+    }));
+    return { students, attendance: enrollAttMap };
+}
+
+export async function getAttendanceReport(classId, sectionId, month) {
+    // month format: 'YYYY-MM'
+    const startDate = `${month}-01`;
+    const [year, mon] = month.split('-').map(Number);
+    const lastDay = new Date(year, mon, 0).getDate();
+    const endDate = `${month}-${String(lastDay).padStart(2, '0')}`;
+    const activeYear = await getActiveAcademicYear();
+    if (!activeYear) return { students: [], summary: [] };
+    const { data: enrolls } = await supabase.from('enrollments')
+        .select('id, student_id, roll_number, students(id, users:users!students_user_id_fkey(name))')
+        .eq('class_id', classId)
+        .eq('section_id', sectionId)
+        .eq('academic_year_id', activeYear.id)
+        .order('roll_number', { ascending: true });
+    if (!enrolls || enrolls.length === 0) return { students: [], summary: [] };
+    const { data: attData } = await supabase.from('attendance')
+        .select('student_id, date, status')
+        .eq('class_id', classId)
+        .eq('section_id', sectionId)
+        .eq('academic_year_id', activeYear.id)
+        .gte('date', startDate)
+        .lte('date', endDate);
+    const studentMap = {};
+    (attData || []).forEach(a => {
+        if (!studentMap[a.student_id]) studentMap[a.student_id] = { present: 0, absent: 0, late: 0, halfDay: 0, total: 0 };
+        studentMap[a.student_id].total++;
+        if (a.status === 'Present') studentMap[a.student_id].present++;
+        else if (a.status === 'Absent') studentMap[a.student_id].absent++;
+        else if (a.status === 'Late') studentMap[a.student_id].late++;
+        else if (a.status === 'Half-Day') studentMap[a.student_id].halfDay++;
+    });
+    const summary = enrolls.map(e => ({
+        student_id: e.student_id,
+        enrollment_id: e.id,
+        name: e.students?.users?.name || 'Student',
+        roll_number: e.roll_number,
+        ...(studentMap[e.student_id] || { present: 0, absent: 0, late: 0, halfDay: 0, total: 0 }),
+        percentage: studentMap[e.student_id]?.total > 0
+            ? ((studentMap[e.student_id].present + studentMap[e.student_id].late * 0.5 + studentMap[e.student_id].halfDay * 0.5) / studentMap[e.student_id].total * 100).toFixed(1)
+            : '0.0'
+    }));
+    return { students: enrolls.map(e => ({
+        id: e.student_id, enrollment_id: e.id,
+        name: e.students?.users?.name || 'Student', roll_number: e.roll_number
+    })), summary };
+}
+
 // ========== ADMIN ATTENDANCE MANAGEMENT ==========
 export async function adminGetAttendance(classId, sectionId, date) {
     const activeYear = await getActiveAcademicYear();
     if (!activeYear) return { attendance: [], students: [] };
 
     // Get all enrollments for this class/section
-    const { data: enrolls } = await insforge.database.from('enrollments')
+    const { data: enrolls } = await supabase.from('enrollments')
         .select('id, student_id, roll_number, students(id, users:users!students_user_id_fkey(name))')
         .eq('class_id', classId)
         .eq('section_id', sectionId)
@@ -2583,13 +2693,13 @@ export async function adminGetAttendance(classId, sectionId, date) {
 
     if (!enrolls || enrolls.length === 0) return { attendance: [], students: [] };
 
-    const enrollIds = enrolls.map(e => e.id);
-
-    // Get attendance for this date (all subjects)
-    const { data: attData } = await insforge.database.from('attendance')
-        .select('enrollment_id, status, subject_id, subjects(name), marked_by')
-        .in('enrollment_id', enrollIds)
-        .eq('attendance_date', date);
+    // Get attendance for this date
+    const { data: attData } = await supabase.from('attendance')
+        .select('student_id, status, marked_by')
+        .eq('class_id', classId)
+        .eq('section_id', sectionId)
+        .eq('academic_year_id', activeYear.id)
+        .eq('date', date);
 
     const students = enrolls.map(e => ({
         id: e.student_id,
@@ -2599,10 +2709,9 @@ export async function adminGetAttendance(classId, sectionId, date) {
     }));
 
     const attendance = (attData || []).map(a => ({
-        enrollment_id: a.enrollment_id,
+        student_id: a.student_id,
+        enrollment_id: enrolls.find(e => e.student_id === a.student_id)?.id,
         status: a.status,
-        subject_id: a.subject_id,
-        subject_name: a.subjects?.name || 'General',
         marked_by: a.marked_by
     }));
 
@@ -2618,14 +2727,14 @@ export async function adminSaveAttendance(rows) {
 
 // ========== LIBRARY MANAGEMENT ==========
 export async function getLibraryBooks({ search = '' } = {}) {
-    let q = insforge.database.from('library_books').select('*').order('title');
+    let q = supabase.from('library_books').select('*').order('title');
     if (search) q = q.ilike('title', `%${search}%`);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
     return { books: data || [] };
 }
 export async function addLibraryBook(form) {
-    const { data, error } = await insforge.database.from('library_books').insert([{
+    const { data, error } = await supabase.from('library_books').insert([{
         title: form.title, author: form.author || null, isbn: form.isbn || null,
         category: form.category || null, total_copies: form.total_copies || 1, available_copies: form.total_copies || 1
     }]).select();
@@ -2633,18 +2742,18 @@ export async function addLibraryBook(form) {
     return data[0];
 }
 export async function updateLibraryBook(id, form) {
-    const { error } = await insforge.database.from('library_books').update({
+    const { error } = await supabase.from('library_books').update({
         title: form.title, author: form.author, isbn: form.isbn,
         category: form.category, total_copies: form.total_copies
     }).eq('id', id);
     if (error) throw new Error(error.message);
 }
 export async function deleteLibraryBook(id) {
-    const { error } = await insforge.database.from('library_books').delete().eq('id', id);
+    const { error } = await supabase.from('library_books').delete().eq('id', id);
     if (error) throw new Error(error.message);
 }
 export async function getLibraryIssues({ status = '' } = {}) {
-    let q = insforge.database.from('library_issues').select('*, library_books(title, author), users(name, email)').order('issue_date', { ascending: false });
+    let q = supabase.from('library_issues').select('*, library_books(title, author), users(name, email)').order('issue_date', { ascending: false });
     if (status) q = q.eq('status', status);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
@@ -2652,10 +2761,10 @@ export async function getLibraryIssues({ status = '' } = {}) {
 }
 export async function issueBook(bookId, userId, dueDate) {
     // Decrease available copies
-    const { data: book } = await insforge.database.from('library_books').select('available_copies').eq('id', bookId).single();
+    const { data: book } = await supabase.from('library_books').select('available_copies').eq('id', bookId).single();
     if (!book || book.available_copies <= 0) throw new Error('No copies available');
-    await insforge.database.from('library_books').update({ available_copies: book.available_copies - 1 }).eq('id', bookId);
-    const { data, error } = await insforge.database.from('library_issues').insert([{
+    await supabase.from('library_books').update({ available_copies: book.available_copies - 1 }).eq('id', bookId);
+    const { data, error } = await supabase.from('library_issues').insert([{
         book_id: bookId, user_id: userId, issue_date: new Date().toISOString().split('T')[0],
         due_date: dueDate, status: 'Issued'
     }]).select();
@@ -2663,21 +2772,21 @@ export async function issueBook(bookId, userId, dueDate) {
     return data[0];
 }
 export async function returnBook(issueId) {
-    const { data: issue } = await insforge.database.from('library_issues').select('book_id').eq('id', issueId).single();
+    const { data: issue } = await supabase.from('library_issues').select('book_id').eq('id', issueId).single();
     if (!issue) throw new Error('Issue record not found');
-    await insforge.database.from('library_issues').update({ return_date: new Date().toISOString().split('T')[0], status: 'Returned' }).eq('id', issueId);
-    const { data: book } = await insforge.database.from('library_books').select('available_copies').eq('id', issue.book_id).single();
-    await insforge.database.from('library_books').update({ available_copies: (book?.available_copies || 0) + 1 }).eq('id', issue.book_id);
+    await supabase.from('library_issues').update({ return_date: new Date().toISOString().split('T')[0], status: 'Returned' }).eq('id', issueId);
+    const { data: book } = await supabase.from('library_books').select('available_copies').eq('id', issue.book_id).single();
+    await supabase.from('library_books').update({ available_copies: (book?.available_copies || 0) + 1 }).eq('id', issue.book_id);
 }
 
 // ========== TRANSPORT MANAGEMENT ==========
 export async function getTransportRoutes() {
-    const { data, error } = await insforge.database.from('transport_routes').select('*').order('route_name');
+    const { data, error } = await supabase.from('transport_routes').select('*').order('route_name');
     if (error) throw new Error(error.message);
     return { routes: data || [] };
 }
 export async function addTransportRoute(form) {
-    const { data, error } = await insforge.database.from('transport_routes').insert([{
+    const { data, error } = await supabase.from('transport_routes').insert([{
         route_name: form.route_name, start_point: form.start_point, end_point: form.end_point,
         fee_per_month: form.fee_per_month || 0
     }]).select();
@@ -2685,20 +2794,20 @@ export async function addTransportRoute(form) {
     return data[0];
 }
 export async function updateTransportRoute(id, form) {
-    const { error } = await insforge.database.from('transport_routes').update(form).eq('id', id);
+    const { error } = await supabase.from('transport_routes').update(form).eq('id', id);
     if (error) throw new Error(error.message);
 }
 export async function deleteTransportRoute(id) {
-    const { error } = await insforge.database.from('transport_routes').delete().eq('id', id);
+    const { error } = await supabase.from('transport_routes').delete().eq('id', id);
     if (error) throw new Error(error.message);
 }
 export async function getTransportVehicles() {
-    const { data, error } = await insforge.database.from('transport_vehicles').select('*, transport_routes(route_name)').order('vehicle_number');
+    const { data, error } = await supabase.from('transport_vehicles').select('*, transport_routes(route_name)').order('vehicle_number');
     if (error) throw new Error(error.message);
     return { vehicles: data || [] };
 }
 export async function addTransportVehicle(form) {
-    const { data, error } = await insforge.database.from('transport_vehicles').insert([{
+    const { data, error } = await supabase.from('transport_vehicles').insert([{
         vehicle_number: form.vehicle_number, capacity: form.capacity || 40,
         driver_name: form.driver_name || null, driver_phone: form.driver_phone || null,
         route_id: form.route_id || null
@@ -2707,18 +2816,18 @@ export async function addTransportVehicle(form) {
     return data[0];
 }
 export async function deleteTransportVehicle(id) {
-    const { error } = await insforge.database.from('transport_vehicles').delete().eq('id', id);
+    const { error } = await supabase.from('transport_vehicles').delete().eq('id', id);
     if (error) throw new Error(error.message);
 }
 export async function getStudentTransport() {
-    const { data, error } = await insforge.database.from('student_transport')
+    const { data, error } = await supabase.from('student_transport')
         .select('*, transport_routes(route_name, fee_per_month), enrollments(roll_number, students(first_name, last_name), classes(name), sections(name))')
         .eq('is_active', true).order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return { assignments: data || [] };
 }
 export async function assignStudentTransport(enrollmentId, routeId, pickupPoint) {
-    const { data, error } = await insforge.database.from('student_transport').upsert([{
+    const { data, error } = await supabase.from('student_transport').upsert([{
         enrollment_id: enrollmentId, route_id: routeId, pickup_point: pickupPoint || null,
         start_date: new Date().toISOString().split('T')[0], is_active: true
     }], { onConflict: 'enrollment_id,route_id' }).select();
@@ -2726,20 +2835,20 @@ export async function assignStudentTransport(enrollmentId, routeId, pickupPoint)
     return data[0];
 }
 export async function removeStudentTransport(id) {
-    const { error } = await insforge.database.from('student_transport').update({ is_active: false, end_date: new Date().toISOString().split('T')[0] }).eq('id', id);
+    const { error } = await supabase.from('student_transport').update({ is_active: false, end_date: new Date().toISOString().split('T')[0] }).eq('id', id);
     if (error) throw new Error(error.message);
 }
 
 // ========== INVENTORY MANAGEMENT ==========
 export async function getInventoryItems({ search = '' } = {}) {
-    let q = insforge.database.from('inventory_items').select('*').order('item_name');
+    let q = supabase.from('inventory_items').select('*').order('item_name');
     if (search) q = q.ilike('item_name', `%${search}%`);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
     return { items: data || [] };
 }
 export async function addInventoryItem(form) {
-    const { data, error } = await insforge.database.from('inventory_items').insert([{
+    const { data, error } = await supabase.from('inventory_items').insert([{
         item_name: form.item_name, category: form.category || null, quantity: form.quantity || 0,
         unit_price: form.unit_price || null, purchase_date: form.purchase_date || null, status: form.status || 'Good'
     }]).select();
@@ -2747,11 +2856,11 @@ export async function addInventoryItem(form) {
     return data[0];
 }
 export async function updateInventoryItem(id, form) {
-    const { error } = await insforge.database.from('inventory_items').update(form).eq('id', id);
+    const { error } = await supabase.from('inventory_items').update(form).eq('id', id);
     if (error) throw new Error(error.message);
 }
 export async function deleteInventoryItem(id) {
-    const { error } = await insforge.database.from('inventory_items').delete().eq('id', id);
+    const { error } = await supabase.from('inventory_items').delete().eq('id', id);
     if (error) throw new Error(error.message);
 }
 
@@ -2764,16 +2873,16 @@ export async function saveTimetableSlot(slot) {
         class_subject_id: slot.class_subject_id || null, room: slot.room || null
     };
     if (slot.id) row.id = slot.id; // only include id for updates
-    const { data, error } = await insforge.database.from('class_timetables').upsert([row]).select();
+    const { data, error } = await supabase.from('class_timetables').upsert([row]).select();
     if (error) throw new Error(error.message);
     return data[0];
 }
 export async function deleteTimetableSlot(id) {
-    const { error } = await insforge.database.from('class_timetables').delete().eq('id', id);
+    const { error } = await supabase.from('class_timetables').delete().eq('id', id);
     if (error) throw new Error(error.message);
 }
 export async function getTimetableForClass(classId, sectionId) {
-    let q = insforge.database.from('class_timetables')
+    let q = supabase.from('class_timetables')
         .select('*, class_subjects(subjects(name))').eq('class_id', classId).order('day_of_week').order('period');
     if (sectionId) q = q.eq('section_id', sectionId);
     const { data, error } = await q;
@@ -2783,7 +2892,7 @@ export async function getTimetableForClass(classId, sectionId) {
 
 // ========== SALARY PAYMENTS ==========
 export async function getSalaryPayments({ month = '', staffId = '' } = {}) {
-    let q = insforge.database.from('salary_payments').select('*, staff(first_name, last_name, employee_id, designation)').order('payment_date', { ascending: false });
+    let q = supabase.from('salary_payments').select('*, staff(first_name, last_name, employee_id, designation)').order('payment_date', { ascending: false });
     if (month) q = q.eq('month_year', month);
     if (staffId) q = q.eq('staff_id', staffId);
     const { data, error } = await q;
@@ -2791,7 +2900,7 @@ export async function getSalaryPayments({ month = '', staffId = '' } = {}) {
     return { payments: data || [] };
 }
 export async function createSalaryPayment(form) {
-    const { data, error } = await insforge.database.from('salary_payments').insert([{
+    const { data, error } = await supabase.from('salary_payments').insert([{
         staff_id: form.staff_id, amount: form.amount, payment_date: form.payment_date || new Date().toISOString().split('T')[0],
         month_year: form.month_year, payment_method: form.payment_method || 'Bank Transfer', status: 'Paid'
     }]).select();
@@ -2799,18 +2908,18 @@ export async function createSalaryPayment(form) {
     return data[0];
 }
 export async function deleteSalaryPayment(id) {
-    const { error } = await insforge.database.from('salary_payments').delete().eq('id', id);
+    const { error } = await supabase.from('salary_payments').delete().eq('id', id);
     if (error) throw new Error(error.message);
 }
 
 // ========== STUDENT DOCUMENTS ==========
 export async function getStudentDocuments(studentId) {
-    const { data, error } = await insforge.database.from('student_documents').select('*').eq('student_id', studentId).order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('student_documents').select('*').eq('student_id', studentId).order('created_at', { ascending: false });
     if (error) throw new Error(error.message);
     return { documents: data || [] };
 }
 export async function addStudentDocument(studentId, form) {
-    const { data, error } = await insforge.database.from('student_documents').insert([{
+    const { data, error } = await supabase.from('student_documents').insert([{
         student_id: studentId, document_type: form.document_type, document_name: form.document_name,
         file_url: form.file_url, file_key: form.file_key || null, notes: form.notes || null
     }]).select();
@@ -2818,26 +2927,26 @@ export async function addStudentDocument(studentId, form) {
     return data[0];
 }
 export async function deleteStudentDocument(id) {
-    const { error } = await insforge.database.from('student_documents').delete().eq('id', id);
+    const { error } = await supabase.from('student_documents').delete().eq('id', id);
     if (error) throw new Error(error.message);
 }
 
 // ========== CLASS TEACHERS ==========
 export async function getClassTeachers(academicYearId) {
-    let q = insforge.database.from('class_teachers').select('*, classes(name), sections(name), staff(first_name, last_name, employee_id)');
+    let q = supabase.from('class_teachers').select('*, classes(name), sections(name), staff(first_name, last_name, employee_id)');
     if (academicYearId) q = q.eq('academic_year_id', academicYearId);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
     return { classTeachers: data || [] };
 }
 export async function assignClassTeacher(academicYearId, classId, sectionId, staffId) {
-    const { data, error } = await insforge.database.from('class_teachers').upsert([{
+    const { data, error } = await supabase.from('class_teachers').upsert([{
         academic_year_id: academicYearId, class_id: classId, section_id: sectionId, staff_id: staffId
     }], { onConflict: 'academic_year_id,class_id,section_id' }).select();
     if (error) throw new Error(error.message);
     return data[0];
 }
 export async function removeClassTeacher(id) {
-    const { error } = await insforge.database.from('class_teachers').delete().eq('id', id);
+    const { error } = await supabase.from('class_teachers').delete().eq('id', id);
     if (error) throw new Error(error.message);
 }

@@ -3,26 +3,26 @@ import { Target, Flag, GraduationCap } from 'lucide-react';
 
 const About = () => {
     return (
-        <section id="about" className="py-16 md:py-20 bg-white">
+        <section id="about" className="py-12 sm:py-16 md:py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-14">
+                <div className="text-center mb-10 sm:mb-14">
                     <h2 className="section-title">About Our Institution</h2>
                     <div className="section-divider" />
                 </div>
 
-                <div className="grid lg:grid-cols-2 gap-12 items-center mb-16">
+                <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center mb-12 sm:mb-16">
                     {/* Image Side */}
                     <div className="relative">
-                        <div className="rounded-lg overflow-hidden shadow-xl">
-                            <img src="/banner.jpg" alt="Seven Star Campus" className="w-full h-80 md:h-96 object-cover" />
+                        <div className="rounded-xl overflow-hidden shadow-xl">
+                            <img src="/banner.jpg" alt="Seven Star Campus" className="w-full h-56 sm:h-72 md:h-80 lg:h-96 object-cover" />
                         </div>
                         {/* Accent badge */}
-                        <div className="absolute -bottom-6 -right-4 md:right-8 bg-primary text-white px-6 py-4 rounded shadow-lg">
-                            <div className="flex items-center gap-3">
-                                <GraduationCap className="w-8 h-8 text-accent" />
+                        <div className="absolute -bottom-4 right-2 sm:-bottom-6 sm:right-4 md:right-8 bg-primary text-white px-4 py-3 sm:px-6 sm:py-4 rounded-lg shadow-lg">
+                            <div className="flex items-center gap-2 sm:gap-3">
+                                <GraduationCap className="w-6 h-6 sm:w-8 sm:h-8 text-accent" />
                                 <div>
-                                    <div className="text-2xl font-bold font-serif">19+</div>
-                                    <div className="text-xs uppercase tracking-wider text-white/80">Years of Excellence</div>
+                                    <div className="text-xl sm:text-2xl font-bold font-serif">19+</div>
+                                    <div className="text-[10px] sm:text-xs uppercase tracking-wider text-white/80">Years of Excellence</div>
                                 </div>
                             </div>
                         </div>
@@ -52,13 +52,13 @@ const About = () => {
                 </div>
 
                 {/* Mission & Vision Cards */}
-                <div className="grid md:grid-cols-2 gap-8">
-                    <div className="bg-gray-50 p-8 rounded-lg border-l-4 border-l-primary hover:shadow-lg transition-shadow">
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                                <Target className="w-6 h-6 text-primary" />
+                <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 md:gap-8">
+                    <div className="bg-gray-50 p-5 sm:p-8 rounded-xl border-l-4 border-l-primary hover:shadow-lg transition-shadow">
+                        <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 font-serif">Our Mission</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-900 font-serif">Our Mission</h3>
                         </div>
                         <p className="text-gray-600 leading-relaxed text-sm">
                             To offer quality education that prepares students for both national and global challenges.
@@ -67,12 +67,12 @@ const About = () => {
                         </p>
                     </div>
 
-                    <div className="bg-gray-50 p-8 rounded-lg border-l-4 border-l-accent hover:shadow-lg transition-shadow">
-                        <div className="flex items-center gap-4 mb-4">
-                            <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
-                                <Flag className="w-6 h-6 text-accent-dark" />
+                    <div className="bg-gray-50 p-5 sm:p-8 rounded-xl border-l-4 border-l-accent hover:shadow-lg transition-shadow">
+                        <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-accent/10 rounded-lg flex items-center justify-center">
+                                <Flag className="w-5 h-5 sm:w-6 sm:h-6 text-accent-dark" />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 font-serif">Our Vision</h3>
+                            <h3 className="text-lg sm:text-xl font-bold text-gray-900 font-serif">Our Vision</h3>
                         </div>
                         <p className="text-gray-600 leading-relaxed text-sm">
                             To shine brightly in the educational landscape of Lumbini Province, guiding students

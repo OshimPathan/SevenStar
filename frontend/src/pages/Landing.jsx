@@ -22,31 +22,35 @@ import UpcomingExams from '../components/landing/UpcomingExams';
 import ClassesSections from '../components/landing/ClassesSections';
 import FeeStructure from '../components/landing/FeeStructure';
 import WhyChooseUs from '../components/landing/WhyChooseUs';
+import ErrorBoundary from '../components/ErrorBoundary';
+
+// Wrap each section so one failing component doesn't take down the whole page
+const Safe = ({ children }) => <ErrorBoundary>{children}</ErrorBoundary>;
 
 const Landing = () => {
     return (
         <div className="min-h-screen flex flex-col">
             <Navbar />
             <main className="flex-grow">
-                <Hero />
-                <AchievementsStrip />
-                <AdmissionBanner />
-                <NoticeTicker />
-                <ScrollReveal><About /></ScrollReveal>
-                <Stats />
-                <ScrollReveal><Highlights /></ScrollReveal>
-                <ScrollReveal><Programs /></ScrollReveal>
-                <ScrollReveal><ClassesSections /></ScrollReveal>
-                <ScrollReveal><FeeStructure /></ScrollReveal>
-                <ScrollReveal><Facilities /></ScrollReveal>
-                <ScrollReveal><Gallery /></ScrollReveal>
-                <ScrollReveal><WhyChooseUs /></ScrollReveal>
-                <ScrollReveal><NoticeBoard /></ScrollReveal>
-                <ScrollReveal><UpcomingExams /></ScrollReveal>
-                <ScrollReveal><Team /></ScrollReveal>
-                <ScrollReveal><Testimonials /></ScrollReveal>
-                <ScrollReveal><Admissions /></ScrollReveal>
-                <ScrollReveal><Contact /></ScrollReveal>
+                <Safe><Hero /></Safe>
+                <Safe><AchievementsStrip /></Safe>
+                <Safe><AdmissionBanner /></Safe>
+                <Safe><NoticeTicker /></Safe>
+                <ScrollReveal><Safe><About /></Safe></ScrollReveal>
+                <Safe><Stats /></Safe>
+                <ScrollReveal><Safe><Highlights /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><Programs /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><ClassesSections /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><FeeStructure /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><Facilities /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><Gallery /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><WhyChooseUs /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><NoticeBoard /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><UpcomingExams /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><Team /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><Testimonials /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><Admissions /></Safe></ScrollReveal>
+                <ScrollReveal><Safe><Contact /></Safe></ScrollReveal>
             </main>
             <Footer />
             <FloatingActions />

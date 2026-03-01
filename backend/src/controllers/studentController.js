@@ -12,32 +12,53 @@ export const getStudentDashboardStats = async (req, res) => {
         if (studentResult.rows.length === 0) return res.status(404).json({ error: 'Student profile not found' });
 
         const student = studentResult.rows[0];
-        const classResult = await query('SELECT * FROM classes WHERE id = $1', [student.class_id]);
 
-        const noticesResult = await query(`
-            SELECT * FROM notices WHERE target_role IN ('ALL', $1)
-            ORDER BY created_at DESC LIMIT 5
-        `, [req.user.role]);
-
-        const feesResult = await query("SELECT * FROM fees WHERE student_id = $1 AND status != 'PAID' ORDER BY due_date ASC", [student.id]);
-        const paidFeesResult = await query("SELECT * FROM fees WHERE student_id = $1 AND status = 'PAID' ORDER BY due_date DESC LIMIT 5", [student.id]);
-
-        // Get attendance summary
-        const attendanceResult = await query(`
-            SELECT status, COUNT(*) as count FROM attendance
-            WHERE student_id = $1
-            GROUP BY status
+        // Get enrollment and class details
+        const enrollResult = await query(`
+            SELECT e.*, c.name as class_name, sec.name as section_name
+            FROM enrollments e
+            JOIN classes c ON e.class_id = c.id
+            LEFT JOIN sections sec ON e.section_id = sec.id
+            JOIN academic_years ay ON e.academic_year_id = ay.id
+            WHERE e.student_id = $1 AND ay.is_active = true
+            LIMIT 1
         `, [student.id]);
+        const enrollment = enrollResult.rows[0];
+
+        const noticesResult = await query(
+            'SELECT * FROM notices WHERE is_active = true ORDER BY created_at DESC LIMIT 5'
+        );
+
+        // Get fees via enrollment
+        let pendingFees = [];
+        let paidFees = [];
+        if (enrollment) {
+            const feesResult = await query("SELECT * FROM student_fees WHERE enrollment_id = $1 AND status != 'Paid' ORDER BY due_date ASC", [enrollment.id]);
+            const paidFeesResult = await query("SELECT * FROM student_fees WHERE enrollment_id = $1 AND status = 'Paid' ORDER BY due_date DESC LIMIT 5", [enrollment.id]);
+            pendingFees = feesResult.rows;
+            paidFees = paidFeesResult.rows;
+        }
+
+        // Get attendance summary via enrollment
+        let attendanceSummary = [];
+        if (enrollment) {
+            const attendanceResult = await query(`
+                SELECT status, COUNT(*) as count FROM attendance
+                WHERE enrollment_id = $1
+                GROUP BY status
+            `, [enrollment.id]);
+            attendanceSummary = attendanceResult.rows;
+        }
 
         const events = await query('SELECT * FROM events ORDER BY start_date ASC LIMIT 5');
 
         res.json({
             profile: studentResult.rows,
-            classDetails: classResult.rows[0],
+            classDetails: enrollment || null,
             recentNotices: noticesResult.rows,
-            pendingFees: feesResult.rows,
-            paidFees: paidFeesResult.rows,
-            attendanceSummary: attendanceResult.rows,
+            pendingFees,
+            paidFees,
+            attendanceSummary,
             upcomingEvents: events.rows,
         });
     } catch (error) {
@@ -58,16 +79,21 @@ export const getStudentResults = async (req, res) => {
         if (studentResult.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
 
         const studentIds = studentResult.rows.map(s => s.id);
+
+        // Get enrollment IDs for these students
+        const enrollResult = await query('SELECT id, student_id FROM enrollments WHERE student_id = ANY($1)', [studentIds]);
+        const enrollmentIds = enrollResult.rows.map(e => e.id);
+
         const results = await query(`
-            SELECT r.marks_obtained, r.total_marks, r.grade, r.remarks,
-                   e.name as exam_name, e.start_date,
+            SELECT em.marks_obtained, em.total_marks, em.grade, em.remarks,
+                   ex.name as exam_name, ex.start_date,
                    s.name as subject_name
-            FROM results r
-            JOIN exams e ON r.exam_id = e.id
-            JOIN subjects s ON r.subject_id = s.id
-            WHERE r.student_id = ANY($1)
-            ORDER BY e.start_date DESC, s.name ASC
-        `, [studentIds]);
+            FROM exam_marks em
+            JOIN exams ex ON em.exam_id = ex.id
+            JOIN subjects s ON em.subject_id = s.id
+            WHERE em.enrollment_id = ANY($1)
+            ORDER BY ex.start_date DESC, s.name ASC
+        `, [enrollmentIds]);
 
         res.json({ results: results.rows });
     } catch (error) {
@@ -88,8 +114,21 @@ export const getStudentFees = async (req, res) => {
         if (studentResult.rows.length === 0) return res.status(404).json({ error: 'Student not found' });
 
         const studentId = studentResult.rows[0].id;
-        const pending = await query("SELECT * FROM fees WHERE student_id = $1 AND status != 'PAID' ORDER BY due_date ASC", [studentId]);
-        const paid = await query("SELECT * FROM fees WHERE student_id = $1 AND status = 'PAID' ORDER BY due_date DESC", [studentId]);
+
+        // Get enrollment for this student
+        const enrollResult = await query(`
+            SELECT e.id FROM enrollments e
+            JOIN academic_years ay ON e.academic_year_id = ay.id
+            WHERE e.student_id = $1 AND ay.is_active = true LIMIT 1
+        `, [studentId]);
+        const enrollmentId = enrollResult.rows[0]?.id;
+
+        let pending = { rows: [] };
+        let paid = { rows: [] };
+        if (enrollmentId) {
+            pending = await query("SELECT * FROM student_fees WHERE enrollment_id = $1 AND status != 'Paid' ORDER BY due_date ASC", [enrollmentId]);
+            paid = await query("SELECT * FROM student_fees WHERE enrollment_id = $1 AND status = 'Paid' ORDER BY due_date DESC", [enrollmentId]);
+        }
 
         res.json({ pending: pending.rows, history: paid.rows });
     } catch (error) {
@@ -100,12 +139,9 @@ export const getStudentFees = async (req, res) => {
 
 export const getStudentNotices = async (req, res) => {
     try {
-        const result = await query(`
-            SELECT n.*, u.name as author_name
-            FROM notices n LEFT JOIN users u ON n.created_by = u.id
-            WHERE n.target_role IN ('ALL', 'STUDENT')
-            ORDER BY n.created_at DESC
-        `);
+        const result = await query(
+            'SELECT * FROM notices WHERE is_active = true ORDER BY created_at DESC'
+        );
         res.json({ notices: result.rows });
     } catch (error) {
         console.error('Error fetching student notices:', error);

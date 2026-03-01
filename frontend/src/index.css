@@ -5,6 +5,7 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
   }
   
   body {
@@ -23,7 +24,13 @@
 
   /* Offset scroll target for fixed navbar */
   [id] {
-    scroll-margin-top: 90px;
+    scroll-margin-top: 80px;
+  }
+
+  @media (min-width: 640px) {
+    [id] {
+      scroll-margin-top: 90px;
+    }
   }
 }
 
@@ -38,13 +45,13 @@
     @apply border-2 border-white text-white px-6 py-2.5 rounded font-semibold text-sm transition-all hover:bg-white hover:text-primary uppercase tracking-wide;
   }
   .section-title {
-    @apply text-3xl md:text-4xl font-bold text-gray-900 mb-2 font-serif;
+    @apply text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 font-serif;
   }
   .section-subtitle {
-    @apply text-gray-500 max-w-2xl mx-auto text-base;
+    @apply text-gray-500 max-w-2xl mx-auto text-sm sm:text-base;
   }
   .section-divider {
-    @apply w-20 h-1 bg-primary mx-auto mt-3 mb-6;
+    @apply w-16 sm:w-20 h-1 bg-primary mx-auto mt-3 mb-4 sm:mb-6;
   }
 }
 
@@ -60,6 +67,29 @@
   }
   .animate-zoom-in {
     animation: zoomIn 8s ease-out forwards;
+  }
+
+  /* Hide scrollbar utility for horizontal scrolling strips */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-4 {
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
 

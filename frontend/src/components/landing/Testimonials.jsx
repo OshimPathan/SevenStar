@@ -67,37 +67,37 @@ const Testimonials = () => {
     const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
     return (
-        <section id="testimonials" className="py-16 md:py-24 bg-gray-50">
+        <section id="testimonials" className="py-12 sm:py-16 md:py-24 bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-14">
+                <div className="text-center mb-10 sm:mb-14">
                     <h2 className="section-title">What People Say</h2>
                     <div className="section-divider" />
                     <p className="section-subtitle">Hear from our community of parents, students and alumni.</p>
                 </div>
 
                 {/* Testimonials Grid */}
-                <div className="grid md:grid-cols-3 gap-6 mb-8">
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
                     {visibleTestimonials.map((item, idx) => (
-                        <div key={item.id || idx} className="bg-white rounded-xl p-7 relative shadow-sm hover:shadow-lg transition-all border-b-4 border-b-primary group">
-                            <Quote className="w-10 h-10 text-primary/10 absolute top-6 right-6" />
+                        <div key={item.id || idx} className="bg-white rounded-xl p-5 sm:p-7 relative shadow-sm hover:shadow-lg transition-all border-b-4 border-b-primary group">
+                            <Quote className="w-8 h-8 sm:w-10 sm:h-10 text-primary/10 absolute top-4 right-4 sm:top-6 sm:right-6" />
 
-                            <div className="flex items-center gap-4 mb-5">
+                            <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
                                 {item.image ? (
                                     <img src={item.image} alt={item.name}
-                                        className="w-14 h-14 rounded-full object-cover border-2 border-primary/20 shadow-sm" />
+                                        className="w-11 h-11 sm:w-14 sm:h-14 rounded-full object-cover border-2 border-primary/20 shadow-sm" />
                                 ) : (
-                                    <div className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg border-2 border-primary/20">
+                                    <div className="w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm sm:text-lg border-2 border-primary/20">
                                         {getInitials(item.name)}
                                     </div>
                                 )}
-                                <div>
-                                    <h4 className="font-bold text-gray-900 font-serif">{item.name}</h4>
-                                    <p className="text-xs text-accent-dark font-semibold">{item.role}</p>
+                                <div className="min-w-0">
+                                    <h4 className="font-bold text-gray-900 font-serif text-sm sm:text-base truncate">{item.name}</h4>
+                                    <p className="text-[10px] sm:text-xs text-accent-dark font-semibold">{item.role}</p>
                                     <StarRating rating={item.rating || 5} />
                                 </div>
                             </div>
 
-                            <p className="text-gray-600 text-sm italic leading-relaxed">
+                            <p className="text-gray-600 text-xs sm:text-sm italic leading-relaxed line-clamp-4 sm:line-clamp-none">
                                 "{item.content}"
                             </p>
                         </div>

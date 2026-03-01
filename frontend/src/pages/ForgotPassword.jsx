@@ -13,19 +13,14 @@ export default function ForgotPassword() {
 
         setStatus('loading');
         try {
-            const response = await fetch(`${import.meta.env.VITE_INSFORGE_URL}/functions/v1/auth-request-reset`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${import.meta.env.VITE_INSFORGE_ANON_KEY}`
-                },
-                body: JSON.stringify({ email })
+            // Use Supabase Auth built-in password reset
+            const { supabase } = await import('../lib/supabase');
+            const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+                redirectTo: `${window.location.origin}/reset-password`,
             });
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to send reset link');
+            if (resetError) {
+                throw new Error(resetError.message || 'Failed to send reset link');
             }
 
             setStatus('success');

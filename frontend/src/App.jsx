@@ -1,6 +1,7 @@
 import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -49,6 +50,8 @@ const AdminTransport = React.lazy(() => import('./pages/dashboard/AdminTransport
 const AdminInventory = React.lazy(() => import('./pages/dashboard/AdminInventory'));
 const AdminTimetable = React.lazy(() => import('./pages/dashboard/AdminTimetable'));
 const AdminSalary = React.lazy(() => import('./pages/dashboard/AdminSalary'));
+const AdminMarkEntry = React.lazy(() => import('./pages/dashboard/AdminMarkEntry'));
+const AdminResults = React.lazy(() => import('./pages/dashboard/AdminResults'));
 
 const PageLoader = () => (
     <div className="flex items-center justify-center h-64">
@@ -68,6 +71,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 function App() {
     return (
+        <ErrorBoundary>
         <Routes>
             {/* Public Routes */}
             <Route path="/" element={<Landing />} />
@@ -77,7 +81,11 @@ function App() {
             <Route path="/admission" element={<AdmissionForm />} />
             <Route path="/exam-schedule" element={<ExamSchedule />} />
             <Route path="/results" element={<ResultChecker />} />
-            <Route path="/pending-approval" element={<Suspense fallback={<PageLoader />}><PendingApprovalPage /></Suspense>} />
+            <Route path="/pending-approval" element={
+                <ProtectedRoute>
+                    <Suspense fallback={<PageLoader />}><PendingApprovalPage /></Suspense>
+                </ProtectedRoute>
+            } />
 
             {/* Protected Dashboard Routes */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardLayout /></ProtectedRoute>}>
@@ -110,6 +118,8 @@ function App() {
                 <Route path="inventory" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminInventory /></Suspense></ProtectedRoute>} />
                 <Route path="timetable" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminTimetable /></Suspense></ProtectedRoute>} />
                 <Route path="salary" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminSalary /></Suspense></ProtectedRoute>} />
+                <Route path="mark-entry" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminMarkEntry /></Suspense></ProtectedRoute>} />
+                <Route path="admin-results" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminResults /></Suspense></ProtectedRoute>} />
                 <Route path="settings" element={<ProtectedRoute allowedRoles={['ADMIN']}><Suspense fallback={<PageLoader />}><AdminSettings /></Suspense></ProtectedRoute>} />
                 <Route path="results" element={<ProtectedRoute allowedRoles={['ADMIN', 'STUDENT', 'PARENT']}><Suspense fallback={<PageLoader />}><StudentResults /></Suspense></ProtectedRoute>} />
                 <Route path="subjects" element={<ProtectedRoute allowedRoles={['STUDENT', 'PARENT']}><Suspense fallback={<PageLoader />}><StudentSubjects /></Suspense></ProtectedRoute>} />
@@ -121,6 +131,7 @@ function App() {
             {/* Catch-all */}
             <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </ErrorBoundary>
     );
 }
 

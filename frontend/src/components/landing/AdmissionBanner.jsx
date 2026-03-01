@@ -21,16 +21,16 @@ const AdmissionBanner = () => {
 
     return (
         <section className="bg-gradient-to-r from-primary to-primary-dark text-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-6">
                 {/* Headline Row */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur">
-                            <Megaphone className="w-5 h-5" />
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur shrink-0">
+                            <Megaphone className="w-4 h-4 sm:w-5 sm:h-5" />
                         </div>
                         <div className="min-w-0">
-                            <h3 className="text-xl font-extrabold font-serif">Admissions {isOpen ? 'Open' : 'Information'}</h3>
-                            <p className="text-sm text-white/90">{bannerText}</p>
+                            <h3 className="text-base sm:text-xl font-extrabold font-serif">Admissions {isOpen ? 'Open' : 'Information'}</h3>
+                            <p className="text-xs sm:text-sm text-white/90">{bannerText}</p>
                             {deadline && (
                                 <div className="flex items-center gap-2 text-xs mt-1">
                                     <CalendarDays className="w-3.5 h-3.5" />
@@ -41,15 +41,15 @@ const AdmissionBanner = () => {
                     </div>
                     <div className="flex flex-wrap items-center gap-2 shrink-0">
                         <Link to="/admission"
-                              className="px-5 py-2.5 bg-white text-primary rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors flex items-center gap-2">
-                            Apply Online <ArrowRight className="w-4 h-4" />
+                              className="px-3 sm:px-5 py-2 sm:py-2.5 bg-white text-primary rounded-xl font-bold text-xs sm:text-sm hover:bg-gray-100 transition-colors flex items-center gap-1.5 sm:gap-2">
+                            Apply Online <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         </Link>
                         <a href="#programs"
-                           className="px-5 py-2.5 bg-white/10 border border-white/20 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors">
+                           className="px-3 sm:px-5 py-2 sm:py-2.5 bg-white/10 border border-white/20 rounded-xl font-bold text-xs sm:text-sm hover:bg-white/20 transition-colors hidden sm:inline-flex">
                             Explore Programs
                         </a>
                         <a href="#fees"
-                           className="px-5 py-2.5 bg-white/10 border border-white/20 rounded-xl font-bold text-sm hover:bg-white/20 transition-colors">
+                           className="px-3 sm:px-5 py-2 sm:py-2.5 bg-white/10 border border-white/20 rounded-xl font-bold text-xs sm:text-sm hover:bg-white/20 transition-colors hidden sm:inline-flex">
                             Fee Structure
                         </a>
                     </div>

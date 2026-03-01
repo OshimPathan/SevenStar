@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MapPin, Phone, Mail, Send, MessageCircle, Clock, CheckCircle, Loader2 } from 'lucide-react';
-import { insforge } from '../../lib/insforge';
+import { supabase } from '../../lib/supabase';
 
 const Contact = () => {
     const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', subject: 'Admission Inquiry', message: '' });
@@ -19,7 +19,7 @@ const Contact = () => {
         setError('');
         setSubmitting(true);
         try {
-            const { error: dbError } = await insforge.database.from('contact_inquiries').insert({
+            const { error: dbError } = await supabase.from('contact_inquiries').insert({
                 first_name: form.firstName.trim(),
                 last_name: form.lastName.trim(),
                 email: form.email.trim(),
@@ -38,15 +38,15 @@ const Contact = () => {
     };
 
     return (
-        <section id="contact" className="py-16 md:py-20 bg-white">
+        <section id="contact" className="py-12 sm:py-16 md:py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-14">
+                <div className="text-center mb-10 sm:mb-14">
                     <h2 className="section-title">Get In Touch</h2>
                     <div className="section-divider" />
                     <p className="section-subtitle">Have questions about admissions or programs? We're here to help.</p>
                 </div>
 
-                <div className="grid lg:grid-cols-5 gap-8">
+                <div className="grid lg:grid-cols-5 gap-6 sm:gap-8">
                     {/* Contact Info Cards */}
                     <div className="lg:col-span-2 space-y-5">
                         <div className="bg-primary text-white p-6 rounded-lg">
@@ -109,8 +109,8 @@ const Contact = () => {
                     </div>
 
                     {/* Contact Form */}
-                    <div className="lg:col-span-3 bg-gray-50 rounded-lg p-8 border border-gray-100">
-                        <h3 className="text-xl font-bold text-gray-900 mb-6 font-serif">Send us a Message</h3>
+                    <div className="lg:col-span-3 bg-gray-50 rounded-xl p-5 sm:p-8 border border-gray-100">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6 font-serif">Send us a Message</h3>
 
                         {submitted ? (
                             <div className="text-center py-16 animate-fade-in">

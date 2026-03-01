@@ -18,8 +18,8 @@ module.exports = async function (request) {
 
         // Initialize Supabase client using Service Role to bypass RLS for credential checking
         const supabase = createSupabaseClient(
-            process.env.VITE_INSFORGE_URL || process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_INSFORGE_ANON_KEY
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
         // Fetch user + hash

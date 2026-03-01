@@ -4,7 +4,7 @@ import dotenv from 'dotenv'
 dotenv.config()
 
 const { Client } = pg
-const sslOptions = process.env.DATABASE_URL?.includes('insforge') ? { rejectUnauthorized: false } : false
+const sslOptions = process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : false
 const client = new Client({ connectionString: process.env.DATABASE_URL, ssl: sslOptions })
 
 async function run() {

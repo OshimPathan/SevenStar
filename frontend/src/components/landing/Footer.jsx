@@ -32,13 +32,13 @@ const Footer = () => {
         <>
             <footer className="bg-gray-900 text-gray-300">
                 {/* Main Footer */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
 
                         {/* Brand */}
-                        <div>
-                            <div className="flex items-center gap-3 mb-5">
-                                <img src="/logo.png" alt="Sevenstar Logo" className="h-12 w-12 rounded-full object-cover" />
+                        <div className="col-span-2 sm:col-span-2 lg:col-span-1">
+                            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-5">
+                                <img src="/logo.png" alt="Sevenstar Logo" className="h-10 w-10 sm:h-12 sm:w-12 rounded-full object-cover" />
                                 <div>
                                     <span className="font-serif font-bold text-lg text-white leading-tight block">{settings.school_name || 'Seven Star'}</span>
                                     <span className="text-[10px] text-gray-500 font-medium tracking-wider uppercase">{settings.tagline || 'English Boarding School'}</span>

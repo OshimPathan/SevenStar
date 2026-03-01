@@ -14,8 +14,8 @@ module.exports = async function (request) {
 
         // Initialize Supabase with service role to bypass RLS for administrative tasks
         const supabase = createSupabaseClient(
-            process.env.VITE_INSFORGE_URL || process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_INSFORGE_ANON_KEY
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
         // 1. Verify the requester is actually an ADMIN

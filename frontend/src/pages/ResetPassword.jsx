@@ -45,19 +45,22 @@ export default function ResetPassword() {
 
         setStatus('loading');
         try {
-            const response = await fetch(`${import.meta.env.VITE_INSFORGE_URL}/functions/v1/auth-reset-password`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${import.meta.env.VITE_INSFORGE_ANON_KEY}`
-                },
-                body: JSON.stringify({ email, password })
-            });
+            // Use Supabase Auth to update password + update local users table hash
+            const { supabase } = await import('../lib/supabase');
+            const bcrypt = (await import('bcryptjs')).default;
 
-            const data = await response.json();
+            // Try Supabase Auth update first (works if user clicked a reset email link)
+            const { error: authError } = await supabase.auth.updateUser({ password });
 
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to reset password');
+            // Also update the local users table password_hash so local login works
+            const newHash = await bcrypt.hash(password, 10);
+            const { error: dbError } = await supabase
+                .from('users')
+                .update({ password_hash: newHash })
+                .eq('email', email);
+
+            if (authError && dbError) {
+                throw new Error('Failed to reset password. Please contact admin.');
             }
 
             setStatus('success');

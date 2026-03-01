@@ -19,7 +19,7 @@ const AdminTransport = () => {
         setLoading(true);
         try {
             const [rRes, vRes, sRes] = await Promise.all([getTransportRoutes(), getTransportVehicles(), getStudentTransport()]);
-            setRoutes(rRes.routes); setVehicles(vRes.vehicles); setStudents(sRes.assignments);
+            setRoutes(rRes?.routes || []); setVehicles(vRes?.vehicles || []); setStudents(sRes?.assignments || []);
         } catch (e) { showToast(e.message, 'error'); }
         setLoading(false);
     };

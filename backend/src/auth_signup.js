@@ -14,8 +14,8 @@ module.exports = async function (request) {
 
         // Initialize Supabase with service role
         const supabase = createClient(
-            process.env.VITE_INSFORGE_URL || process.env.SUPABASE_URL,
-            process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_INSFORGE_ANON_KEY
+            process.env.SUPABASE_URL,
+            process.env.SUPABASE_SERVICE_ROLE_KEY
         );
 
         // Check if user exists in public table

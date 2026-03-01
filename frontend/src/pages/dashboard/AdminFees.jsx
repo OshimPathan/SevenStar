@@ -36,7 +36,7 @@ const AdminFees = () => {
                 getAllFees(),
                 getClasses(),
             ]);
-            setFees(feesData);
+            setFees(Array.isArray(feesData) ? feesData : []);
             setClasses(classesData.classes || []);
         } catch (e) { /* ignore */ }
         setLoading(false);

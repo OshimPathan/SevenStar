@@ -39,7 +39,7 @@ const AdminGallery = () => {
     const fetchPhotos = async () => {
         try {
             const data = await getGalleryPhotos();
-            setPhotos(data);
+            setPhotos(Array.isArray(data) ? data : []);
         } catch (err) {
             showToast(err.message, 'error');
         } finally {

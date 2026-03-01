@@ -25,7 +25,7 @@ const AdminAdmissions = () => {
     const fetchApplications = async () => {
         try {
             const data = await getAdmissionApplications();
-            setApplications(data);
+            setApplications(Array.isArray(data) ? data : []);
         } catch (err) { showToast(err.message, 'error'); }
         finally { setLoading(false); }
     };

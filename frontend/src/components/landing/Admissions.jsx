@@ -11,7 +11,7 @@ const steps = [
 
 const Admissions = () => {
     return (
-        <section id="admissions" className="py-16 md:py-20 bg-gradient-to-br from-primary to-red-900 text-white relative overflow-hidden">
+        <section id="admissions" className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-primary to-red-900 text-white relative overflow-hidden">
             {/* Decorative pattern */}
             <div className="absolute inset-0 opacity-5">
                 <div className="absolute top-10 left-10 w-40 h-40 border-2 border-white rounded-full" />
@@ -19,16 +19,16 @@ const Admissions = () => {
             </div>
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div className="text-center mb-12">
-                    <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider mb-4">
-                        <School className="w-3.5 h-3.5" /> Admissions Open 2082 B.S.
+                <div className="text-center mb-8 sm:mb-12">
+                    <div className="inline-flex items-center gap-2 bg-white/15 backdrop-blur px-3 sm:px-4 py-1.5 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider mb-3 sm:mb-4">
+                        <School className="w-3 h-3 sm:w-3.5 sm:h-3.5" /> Admissions Open 2082 B.S.
                     </div>
-                    <h2 className="text-3xl md:text-4xl font-bold font-serif mb-3">Begin Your Journey at Seven Star</h2>
-                    <p className="text-white/75 max-w-xl mx-auto text-sm">Nursery to +2 — quality English-medium education with hostel, transport, and modern facilities in Devdaha.</p>
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold font-serif mb-2 sm:mb-3">Begin Your Journey at Seven Star</h2>
+                    <p className="text-white/75 max-w-xl mx-auto text-xs sm:text-sm">Nursery to +2 — quality English-medium education with hostel, transport, and modern facilities in Devdaha.</p>
                 </div>
 
                 {/* Compact Steps */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-3xl mx-auto">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-8 sm:mb-12 max-w-3xl mx-auto">
                     {steps.map((s, idx) => (
                         <div key={idx} className="relative text-center">
                             <div className="w-12 h-12 rounded-full bg-white/15 backdrop-blur flex items-center justify-center mx-auto mb-2 border border-white/20">
@@ -44,14 +44,14 @@ const Admissions = () => {
                 </div>
 
                 {/* CTAs */}
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
                     <Link to="/admission"
-                        className="bg-accent hover:bg-yellow-500 text-gray-900 font-bold px-8 py-3.5 rounded-xl text-sm uppercase tracking-wider inline-flex items-center gap-2 transition-colors shadow-lg">
+                        className="w-full sm:w-auto text-center bg-accent hover:bg-yellow-500 text-gray-900 font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl text-sm uppercase tracking-wider inline-flex items-center justify-center gap-2 transition-colors shadow-lg">
                         <GraduationCap className="w-4 h-4" /> Apply Now
                     </Link>
                     <a href="https://wa.me/9779857078448?text=Hello%20Seven%20Star!%20I%20want%20admission%20information."
                         target="_blank" rel="noopener noreferrer"
-                        className="bg-white/15 hover:bg-white/25 backdrop-blur text-white font-semibold px-8 py-3.5 rounded-xl text-sm uppercase tracking-wider inline-flex items-center gap-2 transition-colors border border-white/20">
+                        className="w-full sm:w-auto text-center bg-white/15 hover:bg-white/25 backdrop-blur text-white font-semibold px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl text-sm uppercase tracking-wider inline-flex items-center justify-center gap-2 transition-colors border border-white/20">
                         <Phone className="w-4 h-4" /> WhatsApp Inquiry
                     </a>
                 </div>

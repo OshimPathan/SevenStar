@@ -47,7 +47,7 @@ const AdminPrograms = () => {
     const fetchSubjects = async () => {
         try {
             const data = await getProgramSubjects();
-            setSubjects(data);
+            setSubjects(Array.isArray(data) ? data : []);
         } catch (err) {
             showToast(err.message, 'error');
         } finally { setLoading(false); }

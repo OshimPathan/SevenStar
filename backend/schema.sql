@@ -867,6 +867,28 @@ CREATE INDEX IF NOT EXISTS idx_leave_requests_user_id
 ON leave_requests(user_id);
 
 -- ================================================================
+-- 10️⃣ USER STATUS FOR APPROVAL WORKFLOW
+-- ================================================================
+
+ALTER TABLE users
+ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'PENDING', 'SUSPENDED'));
+
+-- ================================================================
+-- 11️⃣ EXAM PUBLISHING METADATA
+-- ================================================================
+
+ALTER TABLE exams
+ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ,
+ADD COLUMN IF NOT EXISTS published_by UUID REFERENCES users(id) ON DELETE SET NULL;
+
+-- ================================================================
+-- 12️⃣ EXAM MARKS VERIFICATION TIMESTAMP
+-- ================================================================
+
+ALTER TABLE exam_marks
+ADD COLUMN IF NOT EXISTS verified_at TIMESTAMPTZ;
+
+-- ================================================================
 -- END OF PRODUCTION UPGRADE
 -- ================================================================
 
@@ -965,7 +987,7 @@ CREATE TRIGGER after_exam_mark_insert_update
     FOR EACH ROW EXECUTE PROCEDURE calculate_result_summary();
 
 -- =============================================================================
--- ROLE PERMISSIONS (PostgREST / Insforge BaaS Access)
+-- ROLE PERMISSIONS (PostgREST / Supabase Access)
 -- These MUST be re-applied after every schema rebuild.
 -- =============================================================================
 

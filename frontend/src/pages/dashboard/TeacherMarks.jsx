@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { Save, Search, CheckCircle2, ArrowDown, Clipboard, BarChart3, AlertTriangle, ShieldCheck, ShieldX, Lock } from 'lucide-react';
+import { Save, Search, CheckCircle2, ArrowDown, Clipboard, BarChart3, AlertTriangle, ShieldCheck, ShieldX, Lock, UserX } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { getTeacherClasses, getExams, getTeacherSubjectsForClass, getStudentsByClass, getResults, saveMarks } from '../../api';
 
@@ -94,12 +94,10 @@ const TeacherMarks = () => {
                 return {
                     ...s,
                     marks: r?.marks_obtained || 0,
-                    theoryMarks: r?.theory_marks !== undefined && r?.theory_marks !== null ? r.theory_marks : '',
-                    practicalMarks: r?.practical_marks !== undefined && r?.practical_marks !== null ? r.practical_marks : '',
-                    editedMarks: r?.marks_obtained ?? '', // Total
+                    editedMarks: r?.marks_obtained ?? '',
                     grade: r?.grade || '',
                     remarks: r?.remarks || '',
-                    verified: r?.verified || false,
+                    absent: r ? (r.grade === 'AB' || r.remarks === 'Absent') : false,
                 };
             }));
         } catch (e) {
@@ -113,49 +111,49 @@ const TeacherMarks = () => {
         }
     }, [selectedClass, selectedExam, selectedSubject]);
 
+    const handleAbsentToggle = (id) => {
+        setStudents(current => current.map(s => {
+            if (s.id !== id) return s;
+            const newAbsent = !s.absent;
+            if (newAbsent) {
+                return { ...s, absent: true, editedMarks: '', grade: 'AB', remarks: 'Absent' };
+            } else {
+                return { ...s, absent: false, grade: '', remarks: '' };
+            }
+        }));
+        setSaved(false);
+    };
+
     const handleMarksChange = (id, type, value) => {
         const numVal = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
-
         setStudents(current =>
             current.map(s => {
                 if (s.id !== id) return s;
-
-                const newS = { ...s };
-                if (type === 'theory') newS.theoryMarks = numVal;
-                if (type === 'practical') newS.practicalMarks = numVal;
-
-                // Auto-calc total
-                const t = parseFloat(newS.theoryMarks || 0);
-                const p = parseFloat(newS.practicalMarks || 0);
-                newS.editedMarks = (newS.theoryMarks === '' && newS.practicalMarks === '') ? '' : (t + p);
-
-                return newS;
+                return { ...s, editedMarks: numVal };
             })
         );
         setSaved(false);
     };
 
     const handleSave = async () => {
-        const marks = students.map(s => {
-            const gradeInfo = getGrade(s.editedMarks || 0);
+        const marks = students.filter(s => s.editedMarks !== '' || s.absent).map(s => {
+            const gradeInfo = s.absent ? { grade: 'AB', gpa: 0 } : getGrade(s.editedMarks || 0);
             return {
                 exam_id: selectedExam,
                 student_id: s.id,
                 subject_id: selectedSubject,
-                marks_obtained: s.editedMarks || 0,
-                theory_marks: s.theoryMarks === '' ? null : s.theoryMarks,
-                practical_marks: s.practicalMarks === '' ? null : s.practicalMarks,
-                total_marks: currentExam?.full_marks || 100,
+                marks_obtained: s.absent ? 0 : (s.editedMarks || 0),
+                full_marks: currentExam?.full_marks || 100,
                 grade: gradeInfo.grade,
-                gpa: gradeInfo.gpa,
-                remarks: s.remarks || '',
+                grade_point: gradeInfo.gpa,
+                remarks: s.absent ? 'Absent' : (s.remarks || ''),
             };
         });
         try {
             await saveMarks(marks);
             setStudents(current => current.map(s => {
-                const gradeInfo = getGrade(s.editedMarks || 0);
-                return { ...s, marks: s.editedMarks || 0, grade: gradeInfo.grade };
+                const gradeInfo = s.absent ? { grade: 'AB' } : getGrade(s.editedMarks || 0);
+                return { ...s, marks: s.absent ? 0 : (s.editedMarks || 0), grade: gradeInfo.grade };
             }));
             setSaved(true);
             setTimeout(() => setSaved(false), 3000);
@@ -169,11 +167,8 @@ const TeacherMarks = () => {
         if (fillAll === '') return;
         const val = Math.max(0, parseInt(fillAll) || 0);
         setStudents(current => current.map(s => {
-            const newS = { ...s, theoryMarks: val };
-            const t = parseFloat(newS.theoryMarks || 0);
-            const p = parseFloat(newS.practicalMarks || 0);
-            newS.editedMarks = (newS.theoryMarks === '' && newS.practicalMarks === '') ? '' : (t + p);
-            return newS;
+            if (s.absent) return s;
+            return { ...s, editedMarks: val };
         }));
         setSaved(false);
         setFillAll('');
@@ -197,8 +192,10 @@ const TeacherMarks = () => {
         !search || s.name.toLowerCase().includes(search.toLowerCase())
     );
 
+    const absentCount = useMemo(() => students.filter(s => s.absent).length, [students]);
+
     const stats = useMemo(() => {
-        const validMarks = students.filter(s => s.editedMarks !== '').map(s => Number(s.editedMarks));
+        const validMarks = students.filter(s => s.editedMarks !== '' && !s.absent).map(s => Number(s.editedMarks));
         return {
             avg: validMarks.length ? Math.round(validMarks.reduce((a, b) => a + b, 0) / validMarks.length) : 0,
             highest: validMarks.length ? Math.max(...validMarks) : 0,
@@ -252,13 +249,14 @@ const TeacherMarks = () => {
             )}
 
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 {[
                     { label: 'Average', value: stats.avg, suffix: '%' },
                     { label: 'Highest', value: stats.highest },
                     { label: 'Lowest', value: stats.lowest },
                     { label: 'Passed', value: stats.passed, color: 'text-emerald-600' },
                     { label: 'Failed', value: stats.failed, color: 'text-red-600' },
+                    { label: 'Absent', value: absentCount, color: 'text-orange-600' },
                 ].map((s, i) => (
                     <div key={i} className="bg-white rounded-xl border border-gray-100 p-3 text-center">
                         <p className={`text-xl font-bold ${s.color || 'text-gray-900'}`}>{s.value}{s.suffix || ''}</p>
@@ -295,64 +293,50 @@ const TeacherMarks = () => {
                             <tr className="bg-gray-50/80 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                                 <th className="py-3.5 px-5 w-16">Roll</th>
                                 <th className="py-3.5 px-5">Student Name</th>
-                                <th className="py-3.5 px-5 w-24">Theory</th>
-                                <th className="py-3.5 px-5 w-24">Practical</th>
-                                <th className="py-3.5 px-5 w-20">Total</th>
+                                <th className="py-3.5 px-5 w-20 text-center">Absent</th>
+                                <th className="py-3.5 px-5 w-24">Marks</th>
                                 <th className="py-3.5 px-5 w-20 text-center">Grade</th>
-                                <th className="py-3.5 px-5 w-24 text-center">Status</th>
                                 <th className="py-3.5 px-5 hidden md:table-cell">Remarks</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {filteredStudents.map((student) => {
-                                const gradeInfo = getGrade(student.editedMarks || 0);
-                                const isFailing = (student.editedMarks || 0) < (currentExam?.pass_marks || 40);
+                                const gradeInfo = student.absent ? { grade: 'AB', color: 'bg-orange-100 text-orange-700' } : getGrade(student.editedMarks || 0);
+                                const isFailing = !student.absent && (student.editedMarks || 0) < (currentExam?.pass_marks || 40);
                                 return (
-                                    <tr key={student.id} className={`hover:bg-gray-50/50 transition-colors ${isFailing && student.editedMarks !== '' ? 'bg-red-50/30' : ''}`}>
+                                    <tr key={student.id} className={`hover:bg-gray-50/50 transition-colors ${student.absent ? 'bg-orange-50/40' : isFailing && student.editedMarks !== '' ? 'bg-red-50/30' : ''}`}>
                                         <td className="py-3.5 px-5 font-bold text-gray-400 text-sm">{student.roll_number}</td>
                                         <td className="py-3.5 px-5">
-                                            <span className="text-sm font-medium text-gray-800">{student.name}</span>
+                                            <span className={`text-sm font-medium ${student.absent ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{student.name}</span>
+                                        </td>
+                                        <td className="py-3.5 px-5 text-center">
+                                            <label className="inline-flex items-center gap-1.5 cursor-pointer select-none">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={student.absent}
+                                                    onChange={() => handleAbsentToggle(student.id)}
+                                                    className="w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-400 cursor-pointer"
+                                                />
+                                                {student.absent && <UserX className="w-3.5 h-3.5 text-orange-500" />}
+                                            </label>
                                         </td>
                                         <td className="py-3.5 px-5">
                                             <input
                                                 ref={el => inputRefs.current[student.id] = el}
                                                 type="number"
                                                 min="0"
-                                                value={student.theoryMarks}
-                                                onChange={(e) => handleMarksChange(student.id, 'theory', e.target.value)}
+                                                value={student.absent ? '' : student.editedMarks}
+                                                onChange={(e) => handleMarksChange(student.id, 'marks', e.target.value)}
                                                 onKeyDown={(e) => handleKeyDown(e, student.id)}
-                                                className={`w-full px-3 py-2 border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${isFailing ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
-                                                placeholder="TH"
+                                                disabled={student.absent}
+                                                className={`w-full px-3 py-2 border rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors ${student.absent ? 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200' : isFailing ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}
+                                                placeholder={student.absent ? 'AB' : '—'}
                                             />
-                                        </td>
-                                        <td className="py-3.5 px-5">
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                value={student.practicalMarks}
-                                                onChange={(e) => handleMarksChange(student.id, 'practical', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-colors"
-                                                placeholder="PR"
-                                            />
-                                        </td>
-                                        <td className="py-3.5 px-5">
-                                            <span className="font-bold text-gray-700">{student.editedMarks}</span>
                                         </td>
                                         <td className="py-3.5 px-5 text-center">
-                                            {student.editedMarks !== '' && (
+                                            {(student.editedMarks !== '' || student.absent) && (
                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold ${gradeInfo.color}`}>{gradeInfo.grade}</span>
                                             )}
-                                        </td>
-                                        <td className="py-3.5 px-5 text-center">
-                                            {student.verified ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-green-100 text-green-700" title="Verified by admin — editing will reset verification">
-                                                    <ShieldCheck className="w-3 h-3" /> Verified
-                                                </span>
-                                            ) : student.editedMarks !== '' ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700">
-                                                    <ShieldX className="w-3 h-3" /> Pending
-                                                </span>
-                                            ) : null}
                                         </td>
                                         <td className="py-3.5 px-5 hidden md:table-cell">
                                             <input

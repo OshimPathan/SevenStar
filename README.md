@@ -2,7 +2,7 @@
 
 > A full-stack **School Enterprise Resource Planning (ERP)** system and public website for **Seven Star English Boarding School**, Devdaha, Rupandehi (Lumbini Province, Nepal). Quality English-medium education from **Nursery to +2**, NEB-affiliated programs in Management, Computer Science & Education. Established **2063 B.S.**
 
-**🌐 Live URL:** [https://34yxw6n9.insforge.site](https://34yxw6n9.insforge.site)
+**🌐 Live URL:** [https://frontend-nu-eosin-89.vercel.app](https://frontend-nu-eosin-89.vercel.app)
 
 ---
 
@@ -37,7 +37,7 @@ This project is a **complete digital platform** for managing all aspects of a K-
 
 1. **A public-facing website** — Landing page with 15 sections showcasing the school's identity, programs, facilities, gallery, testimonials, fee structure, admissions, and contact.
 2. **A role-based ERP dashboard** — Full school management system supporting four user roles: **Admin**, **Teacher**, **Student**, and **Parent**, each with dedicated views and capabilities.
-3. **A Backend-as-a-Service (BaaS) layer** — All data persistence, authentication, storage, and real-time capabilities powered by **InsForge** (PostgreSQL + Storage + SDK).
+3. **A Backend-as-a-Service (BaaS) layer** — All data persistence, authentication, storage, and real-time capabilities powered by **Supabase** (PostgreSQL + Storage + SDK).
 
 ### What Problems It Solves
 
@@ -71,17 +71,17 @@ This project is a **complete digital platform** for managing all aspects of a K-
 │               │  (64+ functions)│                            │
 │               └────────┬────────┘                            │
 └────────────────────────┼────────────────────────────────────┘
-                         │  InsForge SDK
+                         │  Supabase SDK
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    INSFORGE BaaS                             │
+│                    SUPABASE                             │
 │                                                             │
 │  ┌──────────────┐  ┌───────────┐  ┌──────────────────────┐  │
 │  │  PostgreSQL   │  │  Storage  │  │  Authentication      │  │
 │  │  (13 tables)  │  │ (buckets) │  │  (JWT + bcrypt)      │  │
 │  └──────────────┘  └───────────┘  └──────────────────────┘  │
 │                                                             │
-│  Base URL: https://34yxw6n9.us-east.insforge.app            │
+│  Base URL: https://egzhmzsntrlabfkdvngk.supabase.co            │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -91,7 +91,7 @@ This project is a **complete digital platform** for managing all aspects of a K-
 │  • Route stubs for auth, admin, teacher, student            │
 │  • PostgreSQL direct connection via pg                      │
 │  • Helmet + CORS security                                  │
-│  • NOT the primary data path (frontend uses InsForge SDK)   │
+│  • NOT the primary data path (frontend uses Supabase SDK)   │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -100,10 +100,10 @@ This project is a **complete digital platform** for managing all aspects of a K-
 The **primary data path** is:
 
 ```
-User → React Frontend → api.js → InsForge SDK → PostgreSQL (InsForge-hosted)
+User → React Frontend → api.js → Supabase SDK → PostgreSQL (Supabase-hosted)
 ```
 
-The Express backend exists as a **secondary/legacy API layer** with its own route structure. The frontend communicates exclusively through the InsForge SDK for all database queries, storage uploads, and authentication.
+The Express backend exists as a **secondary/legacy API layer** with its own route structure. The frontend communicates exclusively through the Supabase SDK for all database queries, storage uploads, and authentication.
 
 ---
 
@@ -118,13 +118,13 @@ The Express backend exists as a **secondary/legacy API layer** with its own rout
 | **Icons** | Lucide React | 0.368 | Consistent SVG icon system |
 | **Charts** | Recharts | 2.12 | Dashboard data visualization (area, pie, bar) |
 | **Auth Hashing** | bcryptjs | 3.0 | Client-side password hashing |
-| **BaaS SDK** | @insforge/sdk | 1.1.5 | Database queries, storage, authentication |
+| **BaaS SDK** | @supabase/supabase-js | 2.x | Database queries, storage, authentication |
 | **Backend** | Express | 4.19 | Secondary API layer |
 | **Security** | Helmet | 7.1 | HTTP security headers |
 | **DB Driver** | pg | 8.11 | PostgreSQL connection (backend) |
 | **JWT** | jsonwebtoken | 9.0 | Token-based auth (backend) |
-| **Database** | PostgreSQL | — | Hosted on InsForge |
-| **Hosting** | InsForge Sites | — | Frontend deployment + CDN |
+| **Database** | PostgreSQL | — | Hosted on Supabase |
+| **Hosting** | Vercel | — | Frontend deployment + CDN |
 
 ---
 
@@ -133,7 +133,7 @@ The Express backend exists as a **secondary/legacy API layer** with its own rout
 ```
 collegewebsite/
 ├── README.md                          # This file
-├── AGENTS.md                          # InsForge MCP agent instructions
+├── AGENTS.md                          # Supabase MCP agent instructions
 │
 ├── backend/                           # Express.js backend (secondary)
 │   ├── package.json
@@ -250,7 +250,7 @@ users ──┬── teachers ──── teacher_subjects ──── subjec
 | **notices** | id, title, content, target_role (ALL/TEACHER/STUDENT/PARENT/ADMIN), created_by (FK→users) | Role-targeted announcements |
 | **events** | id, title, description, start_date, end_date, location | School calendar events |
 | **admission_applications** | id, student_name, date_of_birth, parent_name, parent_phone, parent_email, address, applied_for_class, previous_school, status (PENDING/ACCEPTED/REJECTED) | Online admission pipeline |
-| **gallery_photos** | id, title, description, image_url, category, created_at | School photo gallery (stored in InsForge Storage) |
+| **gallery_photos** | id, title, description, image_url, category, created_at | School photo gallery (stored in Supabase Storage) |
 | **program_subjects** | id, class_name, subject_name, credit_hours, description, syllabus_url | Academic program catalog |
 | **site_settings** | id, key, value | Key-value site configuration |
 | **reviews** | id, name, role, content, rating, approved, created_at | Student/parent testimonials with moderation |
@@ -279,7 +279,7 @@ The landing page consists of **15 responsive sections**, all data-driven from th
 | 5 | **Programs** | NEB-affiliated +2 programs with expandable subject lists | `program_subjects` table via API |
 | 6 | **Stats** | Animated counters (students, teachers, years, programs) | Static |
 | 7 | **Facilities** | Grid of campus facilities (labs, library, sports, etc.) | Static |
-| 8 | **Gallery** | Photo grid with category filtering and lightbox zoom | `gallery_photos` table + InsForge Storage |
+| 8 | **Gallery** | Photo grid with category filtering and lightbox zoom | `gallery_photos` table + Supabase Storage |
 | 9 | **WhyChooseUs** | USP cards highlighting differentiators | Static |
 | 10 | **Admissions** | Admission process steps and online application form | `admission_applications` table |
 | 11 | **FeeStructure** | Fee breakdown by class level | Static |
@@ -331,7 +331,7 @@ Admins have **full control** over all school data:
 
 ### Student Management (`/dashboard/students`)
 - Full CRUD: Create, Read, Update, Delete students
-- **Photo upload**: Student photos stored in `student-documents` bucket (InsForge Storage)
+- **Photo upload**: Student photos stored in `student-documents` bucket (Supabase Storage)
 - **Certificate upload**: Academic certificates stored alongside photos
 - **Extended fields**: Gender, nationality, religion, blood group, mother info, emergency contact, previous school details
 - **Class assignment**: Dropdown to assign students to classes
@@ -361,7 +361,7 @@ Admins have **full control** over all school data:
 - CRUD for school events with title, description, dates, location
 
 ### Gallery Management (`/dashboard/manage-gallery`)
-- Upload photos to InsForge `gallery` storage bucket
+- Upload photos to Supabase `gallery` storage bucket
 - Add title, description, category per photo
 - Photos appear on landing page Gallery section
 
@@ -422,7 +422,7 @@ Admins have **full control** over all school data:
 
 ## API Layer (64+ Functions)
 
-All API communication is centralized in `frontend/src/api.js` (~1,100 lines) using the InsForge SDK. No REST calls to the Express backend.
+All API communication is centralized in `frontend/src/api.js` (~1,100 lines) using the Supabase SDK. No REST calls to the Express backend.
 
 ### Function Categories
 
@@ -719,7 +719,7 @@ background: linear-gradient(to bottom, primary-dark, #0a1045)
 
 ## Storage & File Uploads
 
-### InsForge Storage Buckets
+### Supabase Storage Buckets
 
 | Bucket | Access | Contents |
 |--------|--------|----------|
@@ -730,8 +730,8 @@ background: linear-gradient(to bottom, primary-dark, #0a1045)
 
 ```
 1. Admin selects file in UI
-2. api.js calls insforge.storage.from('bucket').uploadAuto(file)
-3. InsForge stores file, returns public URL
+2. api.js calls supabase.storage.from('bucket').uploadAuto(file)
+3. Supabase stores file, returns public URL
 4. URL is saved to corresponding DB record (photo_url, certificate_url, image_url)
 5. UI renders image using the stored URL
 ```
@@ -744,7 +744,7 @@ background: linear-gradient(to bottom, primary-dark, #0a1045)
 
 - **Node.js** ≥ 18.x
 - **npm** ≥ 9.x
-- **InsForge account** with a provisioned backend (or local PostgreSQL for backend-only dev)
+- **Supabase account** with a provisioned backend (or local PostgreSQL for backend-only dev)
 
 ### Installation
 
@@ -757,7 +757,7 @@ cd collegewebsite
 cd frontend
 npm install
 
-# Install backend dependencies (optional — frontend uses InsForge SDK directly)
+# Install backend dependencies (optional — frontend uses Supabase SDK directly)
 cd ../backend
 npm install
 ```
@@ -792,19 +792,21 @@ npm run build
 
 ### Frontend
 
-The InsForge SDK configuration is hardcoded in `api.js`:
+The Supabase client is configured in `src/lib/supabase.js`:
 
 ```javascript
-const insforge = createClient({
-    baseUrl: 'https://34yxw6n9.us-east.insforge.app',
-    anonKey: '<your-anon-key>'
-});
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+    'https://egzhmzsntrlabfkdvngk.supabase.co',
+    '<your-anon-key>'
+);
 ```
 
 > **Note**: For production, move these to `.env` files:
 > ```
-> VITE_INSFORGE_URL=https://34yxw6n9.us-east.insforge.app
-> VITE_INSFORGE_ANON_KEY=your-key-here
+> VITE_SUPABASE_URL=https://egzhmzsntrlabfkdvngk.supabase.co
+> VITE_SUPABASE_ANON_KEY=your-anon-key-here
 > ```
 
 ### Backend
@@ -822,8 +824,8 @@ const insforge = createClient({
 
 ### Current Deployment
 
-- **Platform**: InsForge Sites
-- **Live URL**: [https://34yxw6n9.insforge.site](https://34yxw6n9.insforge.site)
+- **Platform**: Vercel
+- **Live URL**: [https://frontend-nu-eosin-89.vercel.app](https://frontend-nu-eosin-89.vercel.app)
 - **Method**: Source deployment (not pre-built)
 
 ### Deployment Configuration
@@ -857,21 +859,21 @@ Output Dir:      dist
 
 #### 1.1 Server-Side Password Hashing
 - **Current**: Passwords are hashed client-side using `bcryptjs` — the hash is stored directly in DB, but comparison happens in the browser
-- **Target**: Move password hashing to an InsForge Edge Function or the Express backend
+- **Target**: Move password hashing to an Supabase Edge Function or the Express backend
 - **Why**: Client-side hashing means the hash itself becomes the password equivalent; intercepting it grants access
-- **Implementation**: Create an InsForge serverless function for `/auth/login` and `/auth/register` endpoints that handle bcrypt server-side
+- **Implementation**: Create an Supabase serverless function for `/auth/login` and `/auth/register` endpoints that handle bcrypt server-side
 
 #### 1.2 Proper JWT Authentication
 - **Current**: JWT tokens are mock-generated client-side; not verified by any server
-- **Target**: Implement proper JWT signing on the server (InsForge Edge Function or Express backend), verify tokens on protected API calls
+- **Target**: Implement proper JWT signing on the server (Supabase Edge Function or Express backend), verify tokens on protected API calls
 - **Implementation**: 
   - Sign JWT with `HS256` or `RS256` in server function
-  - Add InsForge Row Level Security (RLS) policies tied to JWT claims
-  - Verify token on every SDK call via InsForge auth integration
+  - Add Supabase Row Level Security (RLS) policies tied to JWT claims
+  - Verify token on every SDK call via Supabase auth integration
 
 #### 1.3 Environment Variable Externalization
-- **Current**: InsForge base URL and anon key are hardcoded in `api.js`
-- **Target**: Move to Vite environment variables (`VITE_INSFORGE_URL`, `VITE_INSFORGE_ANON_KEY`) loaded from `.env`
+- **Current**: Supabase base URL and anon key are hardcoded in `api.js`
+- **Target**: Move to Vite environment variables (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) loaded from `.env`
 - **Implementation**: Replace hardcoded values with `import.meta.env.VITE_*`
 
 #### 1.4 Row Level Security (RLS)
@@ -923,7 +925,7 @@ Output Dir:      dist
 - **Target**: Integrate payment gateway (Khalti / eSewa for Nepal)
 - **Implementation**:
   - Add payment initiation from StudentFees page
-  - Webhook handler (InsForge Edge Function) for payment confirmation
+  - Webhook handler (Supabase Edge Function) for payment confirmation
   - Auto-update fee status from UNPAID → PAID on successful payment
   - Payment receipt generation
 
@@ -933,7 +935,7 @@ Output Dir:      dist
   - Attendance alerts (child absent notification to parent)
   - Exam results published
   - New notice posted
-- **Implementation**: InsForge Edge Functions triggering email (Resend/SendGrid) or SMS (Sparrow SMS for Nepal)
+- **Implementation**: Supabase Edge Functions triggering email (Resend/SendGrid) or SMS (Sparrow SMS for Nepal)
 
 ---
 
@@ -959,8 +961,8 @@ Output Dir:      dist
 - **New tables**: `hostels`, `rooms`, `room_assignments`
 - **Features**: Room allocation, hostel fee tracking, roommate management
 
-#### 3.5 Real-Time Features (InsForge WebSocket)
-- **Target**: Leverage InsForge real-time pub/sub for:
+#### 3.5 Real-Time Features (Supabase WebSocket)
+- **Target**: Leverage Supabase real-time pub/sub for:
   - Live attendance updates (teacher marks → parent sees immediately)
   - Real-time notice push notifications
   - Live chat between teachers and parents
@@ -989,7 +991,7 @@ Output Dir:      dist
 - **Implementation**: Reuse `api.js` functions with React Native UI
 
 #### 3.9 AI-Powered Features
-- **Target**: Leverage InsForge AI integration for:
+- **Target**: Leverage Supabase AI integration for:
   - Automated report card remarks based on marks/attendance
   - Student performance prediction (at-risk detection)
   - Chatbot for common parent queries (fees, schedule, etc.)
@@ -1007,7 +1009,7 @@ Output Dir:      dist
 ### 🔵 Phase 4 — Infrastructure & DevOps
 
 #### 4.1 Testing Suite
-- **Unit Tests**: Vitest for api.js functions (mock InsForge SDK)
+- **Unit Tests**: Vitest for api.js functions (mock Supabase SDK)
 - **Component Tests**: Testing Library for React components
 - **E2E Tests**: Playwright for full user flows (login → dashboard → operations)
 - **Coverage Target**: 80%+ on critical paths
@@ -1017,7 +1019,7 @@ Output Dir:      dist
   - Lint (ESLint) on PR
   - Type checking (optional TypeScript migration)
   - Build verification
-  - Auto-deploy to InsForge Sites on `main` merge
+  - Auto-deploy to Vercel on `main` merge
 
 #### 4.3 TypeScript Migration
 - **Current**: Pure JavaScript (`.js`, `.jsx`)
@@ -1051,7 +1053,7 @@ Output Dir:      dist
 | **Payments** | Fee tracking is read-only | No actual payment processing | Integrate Khalti/eSewa gateway |
 | **Notifications** | No email/SMS notifications | Users must log in to check updates | Add notification service |
 | **File Validation** | No server-side file type/size validation | Malicious files could be uploaded | Add validation in Edge Function |
-| **Search** | No full-text search on student/teacher lists | Difficult to find records in large datasets | Implement search with InsForge queries |
+| **Search** | No full-text search on student/teacher lists | Difficult to find records in large datasets | Implement search with Supabase queries |
 | **Pagination** | Most lists load all records at once | Performance degrades with large datasets | Implement cursor-based pagination |
 | **Offline** | No offline support | App unusable without internet | Consider service workers / PWA |
 

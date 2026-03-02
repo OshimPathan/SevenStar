@@ -68,6 +68,7 @@ const NoticeBoard = () => {
         <section id="notices" className="py-12 sm:py-16 md:py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-8 sm:mb-12">
+                    <span className="section-label">Stay Updated</span>
                     <h2 className="section-title">Notice Board & Events</h2>
                     <div className="section-divider" />
                     <p className="section-subtitle">Stay updated with the latest announcements and happenings at Seven Star.</p>

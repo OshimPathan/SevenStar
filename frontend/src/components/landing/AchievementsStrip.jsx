@@ -14,7 +14,7 @@ const features = [
         title: 'Experienced Faculty',
         desc: '80+ qualified teachers with B.Ed/M.Ed degrees',
         href: '#team',
-        color: 'bg-accent text-gray-900',
+        color: 'bg-accent text-white',
     },
     {
         icon: <Building2 className="w-6 h-6 sm:w-7 sm:h-7" />,
@@ -35,7 +35,7 @@ const features = [
         title: 'Hostel & Transport',
         desc: 'Safe hostel with meals & 10+ bus routes covering the district',
         href: '#fees',
-        color: 'bg-accent text-gray-900',
+        color: 'bg-accent text-white',
     },
     {
         icon: <Award className="w-6 h-6 sm:w-7 sm:h-7" />,
@@ -48,21 +48,23 @@ const features = [
 
 const AchievementsStrip = () => {
     return (
-        <div className="relative z-30 -mt-6 sm:-mt-10 md:-mt-12 mb-0">
+        <div className="relative z-30 -mt-8 sm:-mt-12 md:-mt-14 mb-0">
             <div className="max-w-7xl mx-auto px-3 sm:px-6">
-                {/* Horizontal scroll on mobile, grid on desktop */}
-                <div className="flex lg:grid lg:grid-cols-6 gap-2.5 sm:gap-3 overflow-x-auto lg:overflow-visible snap-x snap-mandatory pb-2 lg:pb-0 scrollbar-hide">
+                <div className="flex lg:grid lg:grid-cols-6 gap-3 sm:gap-3.5 overflow-x-auto lg:overflow-visible snap-x snap-mandatory pb-2 lg:pb-0 scrollbar-hide">
                     {features.map((f, i) => (
                         <a
                             key={i}
                             href={f.href}
-                            className={`${f.color} rounded-xl p-3 sm:p-4 hover:shadow-xl transition-all hover:-translate-y-1 duration-300 group cursor-pointer block min-w-[140px] sm:min-w-[160px] lg:min-w-0 snap-start flex-shrink-0 lg:flex-shrink`}
+                            className={`${f.color} rounded-2xl p-4 sm:p-5 hover:shadow-2xl transition-all hover:-translate-y-2 duration-300 group cursor-pointer block min-w-[150px] sm:min-w-[170px] lg:min-w-0 snap-start flex-shrink-0 lg:flex-shrink relative overflow-hidden`}
                         >
-                            <div className="mb-2 sm:mb-3 opacity-80 group-hover:opacity-100 transition-opacity">
-                                {f.icon}
+                            <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
+                            <div className="relative z-10">
+                                <div className="mb-2.5 sm:mb-3 opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all origin-left">
+                                    {f.icon}
+                                </div>
+                                <h4 className="text-xs sm:text-sm font-bold leading-tight mb-1">{f.title}</h4>
+                                <p className="text-[10px] sm:text-[11px] leading-relaxed opacity-75 line-clamp-2">{f.desc}</p>
                             </div>
-                            <h4 className="text-xs sm:text-sm font-bold leading-tight mb-0.5 sm:mb-1">{f.title}</h4>
-                            <p className="text-[10px] sm:text-[11px] leading-relaxed opacity-75 line-clamp-2">{f.desc}</p>
                         </a>
                     ))}
                 </div>

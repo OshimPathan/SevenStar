@@ -94,7 +94,7 @@ const Navbar = () => {
     return (
         <>
             {/* Top Bar - Desktop */}
-            <div className="bg-primary text-white text-xs hidden lg:block">
+            <div className="bg-gradient-to-r from-primary via-primary-dark to-primary text-white text-xs hidden lg:block">
                 <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-10">
                     <div className="flex items-center gap-6">
                         <span className="flex items-center gap-1.5">
@@ -138,12 +138,12 @@ const Navbar = () => {
             </div>
 
             {/* Main Navbar */}
-            <nav ref={menuRef} className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-lg' : 'bg-white shadow-sm'}`}>
+            <nav ref={menuRef} className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/98 backdrop-blur-lg shadow-xl shadow-black/5' : 'bg-white shadow-sm'}`}>
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
                     <div className="flex justify-between items-center h-16 sm:h-20">
                         {/* Logo */}
                         <Link to="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
-                            <img src="/logo.png" alt="Sevenstar Logo" className="h-10 w-10 sm:h-14 sm:w-14 rounded-full object-cover" />
+                            <img src="/logo.png" alt="Sevenstar Logo" className="h-10 w-10 sm:h-14 sm:w-14 rounded-xl object-cover shadow-sm" />
                             <div className="flex flex-col">
                                 <span className="font-serif font-bold text-base sm:text-xl text-primary leading-tight">{settings.school_name || 'Seven Star'}</span>
                                 <span className="text-[9px] sm:text-[11px] text-gray-500 font-medium tracking-wider uppercase">{settings.tagline || 'English Boarding School'}</span>
@@ -181,19 +181,20 @@ const Navbar = () => {
                                     )}
 
                                     {link.children && activeDropdown === link.name && (
-                                        <div className="absolute top-full left-0 w-56 bg-white shadow-xl rounded-b-lg border-t-2 border-primary py-2 animate-fade-in">
+                                        <div className="absolute top-full left-0 w-60 bg-white shadow-2xl rounded-xl border border-gray-100 py-2 animate-fade-in mt-0.5 overflow-hidden">
+                                            <div className="h-1 bg-gradient-to-r from-primary to-accent" />
                                             {link.children.map((child) => (
                                                 child.isRoute ? (
-                                                    <Link key={child.name} to={child.href} className="block px-5 py-2.5 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors">{child.name}</Link>
+                                                    <Link key={child.name} to={child.href} className="block px-5 py-2.5 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 transition-all hover:pl-6">{child.name}</Link>
                                                 ) : (
-                                                    <a key={child.name} href={child.href} className="block px-5 py-2.5 text-sm text-gray-600 hover:text-primary hover:bg-gray-50 transition-colors">{child.name}</a>
+                                                    <a key={child.name} href={child.href} className="block px-5 py-2.5 text-sm text-gray-600 hover:text-primary hover:bg-primary/5 transition-all hover:pl-6">{child.name}</a>
                                                 )
                                             ))}
                                         </div>
                                     )}
                                 </div>
                             ))}
-                            <Link to="/admission" className="ml-3 bg-accent hover:bg-yellow-500 text-gray-900 font-bold px-5 py-2.5 rounded-lg text-sm transition-all transform hover:-translate-y-0.5 shadow-md hover:shadow-lg">Apply Now</Link>
+                            <Link to="/admission" className="ml-3 bg-accent hover:bg-accent-dark text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-all transform hover:-translate-y-0.5 shadow-md hover:shadow-lg hover:shadow-accent/30">Apply Now</Link>
                             <Link to="/login" className="ml-2 btn-primary">ERP Login</Link>
                         </div>
 
@@ -285,7 +286,7 @@ const Navbar = () => {
                             ))}
                         </div>
                         <div className="px-4 pb-4 pt-2 space-y-2 border-t border-gray-100">
-                            <Link to="/admission" onClick={() => setIsOpen(false)} className="block text-center w-full bg-accent hover:bg-yellow-500 text-gray-900 font-bold py-3 rounded-xl text-sm transition-colors shadow-md">
+                            <Link to="/admission" onClick={() => setIsOpen(false)} className="block text-center w-full bg-accent hover:bg-accent-dark text-white font-bold py-3 rounded-xl text-sm transition-colors shadow-md">
                                 Apply Now
                             </Link>
                             <Link to="/login" onClick={() => setIsOpen(false)} className="btn-primary block text-center w-full rounded-xl">

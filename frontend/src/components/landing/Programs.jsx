@@ -405,9 +405,20 @@ const Programs = () => {
         <section id="programs" className="py-16 md:py-20 bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="text-center mb-14">
+                    <span className="section-label">Academics</span>
                     <h2 className="section-title">Academic Programs</h2>
                     <div className="section-divider" />
                     <p className="section-subtitle">NEB-affiliated comprehensive education from early childhood to Higher Secondary (+2) specialization. Click any program to explore subjects, syllabus, fees & admission.</p>
+                </div>
+
+                {/* School Division Label */}
+                <div className="flex items-center gap-4 mb-8">
+                    <div className="flex items-center gap-2">
+                        <School className="w-5 h-5 text-primary" />
+                        <h3 className="font-serif text-xl font-bold text-gray-900">School Division</h3>
+                    </div>
+                    <div className="flex-1 h-px bg-gray-200" />
+                    <span className="text-xs text-gray-400 font-medium">Nursery – Class 10</span>
                 </div>
 
                 {/* School Levels */}
@@ -459,7 +470,7 @@ const Programs = () => {
                                         <img src={stream.image} alt={stream.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                                         <div className="absolute bottom-3 left-4 text-white">{stream.icon}</div>
-                                        <div className="absolute top-3 right-3 bg-accent text-gray-900 text-[10px] font-bold px-2.5 py-1 rounded-full">
+                                        <div className="absolute top-3 right-3 bg-accent text-white text-[10px] font-bold px-2.5 py-1 rounded-full">
                                             NRs. {pd?.fee?.monthly}/mo
                                         </div>
                                     </div>

@@ -42,45 +42,54 @@ const Stats = () => {
     ];
 
     return (
-        <section ref={ref} className="relative py-12 sm:py-16 md:py-20 overflow-hidden">
+        <section ref={ref} className="relative py-16 sm:py-20 md:py-24 overflow-hidden">
             {/* Background */}
             <div className="absolute inset-0">
                 <img src="/gallery1.jpg" alt="" className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-primary/90" />
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/95 via-primary-dark/90 to-sidebar/95" />
             </div>
 
+            {/* Grid pattern overlay */}
+            <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '30px 30px' }} />
+
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div className="text-center mb-8 sm:mb-12">
-                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-2">Facts & Figures</h2>
-                    <div className="w-16 sm:w-20 h-1 bg-accent mx-auto mt-3"></div>
+                <div className="text-center mb-10 sm:mb-14">
+                    <span className="inline-block text-accent text-xs font-bold uppercase tracking-[0.25em] mb-3">Our Impact</span>
+                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3">Facts & Figures</h2>
+                    <div className="w-20 sm:w-24 h-1.5 bg-gradient-to-r from-accent to-accent-light mx-auto rounded-full"></div>
                 </div>
 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                     {stats.map((stat, idx) => (
-                        <StatItem key={idx} stat={stat} visible={visible} />
+                        <StatItem key={idx} stat={stat} visible={visible} idx={idx} />
                     ))}
                 </div>
             </div>
 
-            {/* Decorative rhombus shapes like Trinity */}
-            <div className="absolute top-10 left-10 w-16 h-16 border-2 border-accent/20 rotate-45 hidden lg:block"></div>
-            <div className="absolute bottom-10 right-10 w-24 h-24 border-2 border-accent/20 rotate-45 hidden lg:block"></div>
+            {/* Decorative elements */}
+            <div className="absolute top-10 left-10 w-20 h-20 border-2 border-accent/15 rotate-45 hidden lg:block animate-float"></div>
+            <div className="absolute bottom-10 right-10 w-28 h-28 border-2 border-accent/10 rotate-45 hidden lg:block" style={{ animation: 'float 8s ease-in-out infinite 1.5s' }}></div>
+            <div className="absolute top-1/2 left-1/4 w-12 h-12 border border-white/5 rotate-45 hidden lg:block" style={{ animation: 'float 10s ease-in-out infinite 3s' }}></div>
         </section>
     );
 };
 
-const StatItem = ({ stat, visible }) => {
+const StatItem = ({ stat, visible, idx }) => {
     const count = useCountUp(stat.value, 2000, visible);
     return (
-        <div className="text-center group">
-            <div className="flex justify-center mb-2 sm:mb-4 text-accent group-hover:-translate-y-1 transition-transform duration-300">
-                <div className="[&>svg]:w-6 [&>svg]:h-6 sm:[&>svg]:w-8 sm:[&>svg]:h-8">{stat.icon}</div>
-            </div>
-            <div className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white mb-1 sm:mb-2 font-serif tabular-nums">
-                {count}{stat.suffix}
-            </div>
-            <div className="text-accent text-xs sm:text-sm font-semibold uppercase tracking-[0.1em] sm:tracking-[0.15em]">
-                {stat.label}
+        <div className="text-center group relative" style={{ animationDelay: `${idx * 150}ms` }}>
+            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5 sm:p-7 hover:bg-white/10 transition-all duration-300 hover:-translate-y-1">
+                <div className="flex justify-center mb-3 sm:mb-4">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:bg-accent/20 group-hover:scale-110 transition-all duration-300">
+                        <div className="[&>svg]:w-6 [&>svg]:h-6 sm:[&>svg]:w-7 sm:[&>svg]:h-7">{stat.icon}</div>
+                    </div>
+                </div>
+                <div className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white mb-1.5 font-serif tabular-nums">
+                    {count}{stat.suffix}
+                </div>
+                <div className="text-accent/90 text-[10px] sm:text-xs font-bold uppercase tracking-[0.15em]">
+                    {stat.label}
+                </div>
             </div>
         </div>
     );

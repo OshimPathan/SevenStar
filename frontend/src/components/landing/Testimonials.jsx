@@ -67,19 +67,25 @@ const Testimonials = () => {
     const getInitials = (name) => name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
 
     return (
-        <section id="testimonials" className="py-12 sm:py-16 md:py-24 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-10 sm:mb-14">
+        <section id="testimonials" className="py-14 sm:py-20 md:py-24 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute top-0 right-0 w-72 h-72 bg-accent/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/3 rounded-full blur-3xl" />
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="text-center mb-12 sm:mb-16">
+                    <span className="inline-block text-primary text-xs font-bold uppercase tracking-[0.2em] mb-3">Testimonials</span>
                     <h2 className="section-title">What People Say</h2>
                     <div className="section-divider" />
-                    <p className="section-subtitle">Hear from our community of parents, students and alumni.</p>
+                    <p className="section-subtitle max-w-2xl mx-auto">Hear from our community of parents, students and alumni.</p>
                 </div>
 
                 {/* Testimonials Grid */}
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
+                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5 sm:gap-6 mb-8 sm:mb-10">
                     {visibleTestimonials.map((item, idx) => (
-                        <div key={item.id || idx} className="bg-white rounded-xl p-5 sm:p-7 relative shadow-sm hover:shadow-lg transition-all border-b-4 border-b-primary group">
-                            <Quote className="w-8 h-8 sm:w-10 sm:h-10 text-primary/10 absolute top-4 right-4 sm:top-6 sm:right-6" />
+                        <div key={item.id || idx} className="bg-white rounded-2xl p-6 sm:p-7 relative shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-gray-100 group overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-accent to-primary opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <Quote className="w-8 h-8 sm:w-10 sm:h-10 text-primary/8 absolute top-5 right-5 sm:top-6 sm:right-6" />
 
                             <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5">
                                 {item.image ? (
@@ -106,17 +112,17 @@ const Testimonials = () => {
 
                 {/* Pagination */}
                 {totalPages > 1 && (
-                    <div className="flex items-center justify-center gap-3 mb-10">
+                    <div className="flex items-center justify-center gap-3 mb-12">
                         <button onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0}
-                            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                            className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary hover:shadow-md disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                             <ChevronLeft className="w-5 h-5" />
                         </button>
                         {Array.from({ length: totalPages }, (_, i) => (
                             <button key={i} onClick={() => setCurrentPage(i)}
-                                className={`w-3 h-3 rounded-full transition-all ${currentPage === i ? 'bg-primary scale-125' : 'bg-gray-300 hover:bg-gray-400'}`} />
+                                className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${currentPage === i ? 'bg-primary w-7 rounded-full' : 'bg-gray-300 hover:bg-gray-400'}`} />
                         ))}
                         <button onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage === totalPages - 1}
-                            className="w-10 h-10 rounded-full border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                            className="w-10 h-10 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:border-primary hover:text-primary hover:shadow-md disabled:opacity-30 disabled:cursor-not-allowed transition-all">
                             <ChevronRight className="w-5 h-5" />
                         </button>
                     </div>
@@ -125,12 +131,14 @@ const Testimonials = () => {
                 {/* Write a Review CTA / Form */}
                 <div className="max-w-2xl mx-auto">
                     {!showForm ? (
-                        <div className="bg-white rounded-2xl p-8 text-center border border-gray-200 shadow-sm">
-                            <MessageSquarePlus className="w-10 h-10 text-primary mx-auto mb-3" />
-                            <h3 className="text-lg font-bold text-gray-900 font-serif mb-2">Share Your Experience</h3>
-                            <p className="text-sm text-gray-500 mb-5">Are you a parent, student, or alumni? We'd love to hear about your experience at Seven Star.</p>
+                        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 sm:p-10 text-center border border-gray-100 shadow-sm hover:shadow-lg transition-all">
+                            <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <MessageSquarePlus className="w-8 h-8 text-primary" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 font-serif mb-2">Share Your Experience</h3>
+                            <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">Are you a parent, student, or alumni? We'd love to hear about your experience at Seven Star.</p>
                             <button onClick={() => setShowForm(true)}
-                                className="btn-primary inline-flex items-center gap-2 px-8">
+                                className="btn-primary inline-flex items-center gap-2 px-8 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-0.5">
                                 <Star className="w-4 h-4" /> Write a Review
                             </button>
                         </div>

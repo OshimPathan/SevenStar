@@ -11,7 +11,7 @@ const steps = [
 
 const Admissions = () => {
     return (
-        <section id="admissions" className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-primary to-red-900 text-white relative overflow-hidden">
+        <section id="admissions" className="py-12 sm:py-16 md:py-20 bg-gradient-to-br from-primary to-primary-dark text-white relative overflow-hidden">
             {/* Decorative pattern */}
             <div className="absolute inset-0 opacity-5">
                 <div className="absolute top-10 left-10 w-40 h-40 border-2 border-white rounded-full" />
@@ -46,7 +46,7 @@ const Admissions = () => {
                 {/* CTAs */}
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
                     <Link to="/admission"
-                        className="w-full sm:w-auto text-center bg-accent hover:bg-yellow-500 text-gray-900 font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl text-sm uppercase tracking-wider inline-flex items-center justify-center gap-2 transition-colors shadow-lg">
+                        className="w-full sm:w-auto text-center bg-accent hover:bg-accent-dark text-white font-bold px-6 sm:px-8 py-3 sm:py-3.5 rounded-xl text-sm uppercase tracking-wider inline-flex items-center justify-center gap-2 transition-colors shadow-lg">
                         <GraduationCap className="w-4 h-4" /> Apply Now
                     </Link>
                     <a href="https://wa.me/9779857078448?text=Hello%20Seven%20Star!%20I%20want%20admission%20information."

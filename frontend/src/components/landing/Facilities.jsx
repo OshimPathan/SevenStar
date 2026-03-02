@@ -15,23 +15,28 @@ const facilities = [
 
 const Facilities = () => {
     return (
-        <section id="facilities" className="py-12 sm:py-16 md:py-20 bg-gray-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="text-center mb-8 sm:mb-12">
+        <section id="facilities" className="py-14 sm:py-20 md:py-24 bg-gradient-to-b from-gray-50 to-white relative overflow-hidden">
+            {/* Background decoration */}
+            <div className="absolute top-0 left-1/2 w-80 h-80 bg-primary/3 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="text-center mb-10 sm:mb-14">
+                    <span className="inline-block text-primary text-xs font-bold uppercase tracking-[0.2em] mb-3">Our Campus</span>
                     <h2 className="section-title">Campus & Facilities</h2>
                     <div className="section-divider" />
-                    <p className="section-subtitle">Modern infrastructure for an enriched learning environment</p>
+                    <p className="section-subtitle max-w-2xl mx-auto">Modern infrastructure for an enriched learning environment</p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                     {facilities.map((f, idx) => (
-                        <div key={idx} className="flex items-start gap-3 sm:gap-4 p-4 sm:p-5 rounded-xl border border-gray-100 bg-white hover:shadow-md transition-all group">
-                            <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl ${f.color} flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform`}>
+                        <div key={idx} className="group flex items-start gap-4 p-5 sm:p-6 rounded-2xl border border-gray-100 bg-white hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden">
+                            <div className="absolute top-0 left-0 w-full h-0.5 bg-gradient-to-r opacity-0 group-hover:opacity-100 transition-opacity" style={{ backgroundImage: `linear-gradient(to right, ${f.color.includes('blue') ? '#3b82f6' : f.color.includes('purple') ? '#9333ea' : f.color.includes('amber') ? '#f59e0b' : f.color.includes('emerald') ? '#10b981' : f.color.includes('green') ? '#22c55e' : f.color.includes('orange') ? '#f97316' : f.color.includes('rose') ? '#f43f5e' : f.color.includes('cyan') ? '#06b6d4' : '#64748b'}, transparent)` }} />
+                            <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl ${f.color} flex items-center justify-center shrink-0 group-hover:scale-110 group-hover:shadow-lg transition-all duration-300`}>
                                 <div className="[&>svg]:w-5 [&>svg]:h-5 sm:[&>svg]:w-6 sm:[&>svg]:h-6">{f.icon}</div>
                             </div>
                             <div className="min-w-0">
-                                <h4 className="font-bold text-gray-900 text-sm mb-0.5 sm:mb-1">{f.name}</h4>
-                                <p className="text-xs text-gray-500 leading-relaxed">{f.desc}</p>
+                                <h4 className="font-bold text-gray-900 text-sm sm:text-base mb-1">{f.name}</h4>
+                                <p className="text-xs sm:text-sm text-gray-500 leading-relaxed">{f.desc}</p>
                             </div>
                         </div>
                     ))}

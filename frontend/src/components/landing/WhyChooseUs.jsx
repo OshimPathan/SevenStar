@@ -17,7 +17,7 @@ const WhyChooseUs = () => {
                 "Recognized for quality by District Education Office",
                 "Trusted by 900+ families across Rupandehi and neighboring districts"
             ],
-            color: "from-primary to-red-800"
+            color: "from-primary to-primary-dark"
         },
         {
             title: "English-Medium Instruction",
@@ -141,31 +141,32 @@ const WhyChooseUs = () => {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
                 {/* Header */}
-                <div className="text-center mb-10 sm:mb-16">
-                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl font-bold mb-3">Why Choose Seven Star?</h2>
-                    <div className="w-16 sm:w-20 h-1 bg-accent mx-auto mt-3 mb-4 sm:mb-6"></div>
-                    <p className="text-gray-400 max-w-3xl mx-auto leading-relaxed text-sm">
+                <div className="text-center mb-12 sm:mb-16">
+                    <span className="inline-block text-accent text-xs font-bold uppercase tracking-[0.25em] mb-3">Why Us</span>
+                    <h2 className="font-serif text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4">Why Choose Seven Star?</h2>
+                    <div className="w-20 sm:w-24 h-1.5 bg-gradient-to-r from-accent to-accent-light mx-auto rounded-full mb-5 sm:mb-6"></div>
+                    <p className="text-gray-400 max-w-3xl mx-auto leading-relaxed text-sm sm:text-base">
                         For nearly two decades, Seven Star English Boarding School has been shaping future leaders in Devdaha, Rupandehi. Here's what sets us apart and why 900+ families trust us with their children's education.
                     </p>
                 </div>
 
                 {/* Cards Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
                     {reasons.map((reason, idx) => {
                         const isExpanded = expandedCard === idx;
                         return (
                             <div key={idx}
-                                className={`rounded-xl border transition-all duration-300 cursor-pointer group ${
+                                className={`rounded-2xl border transition-all duration-300 cursor-pointer group ${
                                     isExpanded
-                                        ? 'bg-white/10 border-accent/40 shadow-lg shadow-accent/5'
-                                        : 'bg-white/5 border-white/10 hover:border-accent/30 hover:bg-white/[0.08]'
+                                        ? 'bg-white/10 border-accent/40 shadow-xl shadow-accent/10'
+                                        : 'bg-white/5 border-white/10 hover:border-accent/30 hover:bg-white/[0.08] hover:-translate-y-1'
                                 }`}
                                 onClick={() => setExpandedCard(isExpanded ? null : idx)}>
 
-                                <div className="p-4 sm:p-6">
+                                <div className="p-5 sm:p-6">
                                     {/* Icon + Title */}
                                     <div className="flex items-start gap-3 sm:gap-4 mb-3 sm:mb-4">
-                                        <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br ${reason.color} text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform shadow-lg`}>
+                                        <div className={`w-11 h-11 sm:w-13 sm:h-13 rounded-xl bg-gradient-to-br ${reason.color} text-white flex items-center justify-center shrink-0 group-hover:scale-110 transition-all duration-300 shadow-lg group-hover:shadow-xl`}>
                                             <div className="[&>svg]:w-5 [&>svg]:h-5 sm:[&>svg]:w-6 sm:[&>svg]:h-6">{reason.icon}</div>
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -200,17 +201,18 @@ const WhyChooseUs = () => {
                 </div>
 
                 {/* Bottom CTA */}
-                <div className="mt-10 sm:mt-14 text-center">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-8 max-w-3xl mx-auto backdrop-blur-sm">
-                        <h3 className="font-serif text-lg sm:text-xl font-bold text-white mb-2">Ready to Join Seven Star Family?</h3>
-                        <p className="text-gray-400 text-xs sm:text-sm mb-4 sm:mb-6 max-w-lg mx-auto">
+                <div className="mt-12 sm:mt-16 text-center">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-10 max-w-3xl mx-auto backdrop-blur-sm relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-accent via-primary to-accent" />
+                        <h3 className="font-serif text-xl sm:text-2xl font-bold text-white mb-3">Ready to Join Seven Star Family?</h3>
+                        <p className="text-gray-400 text-sm sm:text-base mb-6 max-w-lg mx-auto leading-relaxed">
                             Experience the difference that 19+ years of educational excellence brings. Visit our campus or speak with our admissions team today.
                         </p>
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                            <a href="#admissions" className="w-full sm:w-auto btn-primary px-6 sm:px-8 py-3 inline-flex items-center justify-center gap-2 text-sm">
+                            <a href="#admissions" className="w-full sm:w-auto bg-accent hover:bg-accent-dark text-white font-bold px-8 py-3.5 rounded-xl inline-flex items-center justify-center gap-2 text-sm shadow-lg hover:shadow-accent/30 transition-all hover:-translate-y-0.5">
                                 Apply for Admission <ArrowRight className="w-4 h-4" />
                             </a>
-                            <a href="#contact" className="w-full sm:w-auto btn-outline px-6 sm:px-8 py-3 inline-flex items-center justify-center gap-2 text-sm border-white/30 text-white hover:bg-white/10">
+                            <a href="#contact" className="w-full sm:w-auto border-2 border-white/30 text-white px-8 py-3.5 rounded-xl inline-flex items-center justify-center gap-2 text-sm font-semibold hover:bg-white/10 hover:border-white/50 transition-all hover:-translate-y-0.5">
                                 Contact Us
                             </a>
                         </div>
